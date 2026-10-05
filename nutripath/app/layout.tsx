@@ -1,14 +1,25 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-plus-jakarta-sans",
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "NutriPath — Personal Nutrition Navigator for Students",
+  title: "SMANU — SmartNutrition for Students",
   description:
-    "NutriPath is a RAG-powered educational nutrition assistant that helps students make better food decisions based on their real situation, available foods, and budget.",
-  keywords: ["nutrition", "student", "RAG", "food choices", "healthy eating", "gizi"],
+    "SMANU is a RAG-powered educational nutrition assistant that helps students make better food decisions based on their real situation, available foods, and budget.",
+  keywords: ["nutrition", "student", "RAG", "food choices", "healthy eating", "gizi", "SMANU"],
 };
 
 export default function RootLayout({
@@ -17,7 +28,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={geist.variable}>
+    <html lang="en" className={`${inter.variable} ${plusJakartaSans.variable}`}>
+      {/* Material Symbols icon font */}
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+      />
       <body className="antialiased">{children}</body>
     </html>
   );
