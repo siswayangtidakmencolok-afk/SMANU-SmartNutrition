@@ -58,17 +58,17 @@
 
   --color-surface-tint: #565e74;
 
-  /* Fonts */
-  --font-display-lg: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-headline-lg: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-headline-md: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-headline-sm: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-metric-display: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-body-lg: "Inter", system-ui, sans-serif;
-  --font-body-md: "Inter", system-ui, sans-serif;
-  --font-body-sm: "Inter", system-ui, sans-serif;
-  --font-label-md: "Inter", system-ui, sans-serif;
-  --font-label-sm: "Inter", system-ui, sans-serif;
+  /* Fonts — reference next/font CSS variables */
+  --font-display-lg: var(--font-plus-jakarta-sans, "Plus Jakarta Sans", system-ui, sans-serif);
+  --font-headline-lg: var(--font-plus-jakarta-sans, "Plus Jakarta Sans", system-ui, sans-serif);
+  --font-headline-md: var(--font-plus-jakarta-sans, "Plus Jakarta Sans", system-ui, sans-serif);
+  --font-headline-sm: var(--font-plus-jakarta-sans, "Plus Jakarta Sans", system-ui, sans-serif);
+  --font-metric-display: var(--font-plus-jakarta-sans, "Plus Jakarta Sans", system-ui, sans-serif);
+  --font-body-lg: var(--font-inter, "Inter", system-ui, sans-serif);
+  --font-body-md: var(--font-inter, "Inter", system-ui, sans-serif);
+  --font-body-sm: var(--font-inter, "Inter", system-ui, sans-serif);
+  --font-label-md: var(--font-inter, "Inter", system-ui, sans-serif);
+  --font-label-sm: var(--font-inter, "Inter", system-ui, sans-serif);
 
   /* Spacing */
   --spacing-space-xs: 0.25rem;
@@ -113,7 +113,7 @@
   }
 
   body {
-    font-family: var(--font-body-md);
+    font-family: var(--font-inter, "Inter", system-ui, sans-serif);
     -webkit-font-smoothing: antialiased;
     background-color: var(--color-surface);
     color: var(--color-on-surface);
@@ -130,6 +130,14 @@
 }
 
 @layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
