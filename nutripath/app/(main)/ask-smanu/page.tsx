@@ -41,38 +41,77 @@ const suggestedQueries = [
   "How to read a nutrition label",
 ];
 
-// Mock structured response for UI demo
-const mockResponse: StructuredSection[] = [
-  {
-    num: 1,
-    label: "Answer",
-    accent: "primary",
-    content:
-      "Protein is an essential macronutrient built from amino acids that repair muscles, support neurotransmitter function, and sustain steady satiety during long studying hours without blood sugar spikes.",
-  },
-  {
-    num: 2,
-    label: "Why",
-    accent: "blue",
-    content:
-      "Unlike quick refined carbohydrates, dietary proteins digest gradually, providing prolonged physical and cognitive stamina.",
-  },
-  {
-    num: 3,
-    label: "Based on Your Context",
-    accent: "green",
-    tag: "School Day · Active",
-    content:
-      "Current situation is marked as School Day. Having portable protein snacks (like Greek yogurt, nuts, or hard-boiled eggs) between classes helps avoid the midday academic crash.",
-  },
-  {
-    num: 4,
-    label: "Practical Consideration",
-    accent: "blue",
-    content:
-      "For student budgets, canned tuna, lentils, peanut butter, and eggs provide high nutritional density at minimal cost.",
-  },
-];
+// ─────────────────────────────────────────────────────────────
+// Parse teks plain dari Langflow → StructuredSection[]
+//
+// Langflow biasanya mengembalikan jawaban dalam format paragraf.
+// Fungsi ini memecah teks menjadi section-section terstruktur
+// agar sesuai dengan UI yang sudah ada.
+// ─────────────────────────────────────────────────────────────
+function parseLangflowText(
+  rawText: string,
+  situation: string
+): StructuredSection[] {
+  if (!rawText.trim()) return [];
+
+  // Normalisasi teks: hilangkan trailing whitespace per baris
+  const text = rawText.trim();
+
+  // Coba deteksi header section yang umum dikirim oleh prompt SMANU
+  // (bold markdown, numbered list, atau kata kunci tertentu)
+  const sectionPatterns = [
+    // **HEADER** atau **Header:**
+    /\*\*([^*]+)\*\*[:\s]*([\s\S]*?)(?=\*\*[^*]+\*\*|$)/g,
+    // ## Header atau # Header
+    /^#{1,3}\s+(.+)\n([\s\S]*?)(?=^#{1,3}\s+|\s*$)/gm,
+  ];
+
+  // Coba ekstrak dengan pola bold markdown
+  const boldMatches: Array<{ label: string; content: string }> = [];
+  const boldRegex = /\*\*([^*\n]+)\*\*[:\s]*([\s\S]*?)(?=\n\*\*[^*\n]+\*\*|\n#{1,3}\s+|$)/g;
+  let match = boldRegex.exec(text);
+  while (match !== null) {
+    const label = match[1].replace(/[:#\s]+$/, "").trim();
+    const content = match[2].replace(/\n{2,}/g, "\n").trim();
+    if (label && content) {
+      boldMatches.push({ label, content });
+    }
+    match = boldRegex.exec(text);
+  }
+
+  const accents: Array<StructuredSection["accent"]> = [
+    "primary", "blue", "green", "blue", "primary",
+  ];
+
+  if (boldMatches.length >= 2) {
+    return boldMatches.slice(0, 5).map((s, i) => ({
+      num: i + 1,
+      label: s.label,
+      content: s.content,
+      accent: accents[i % accents.length],
+      tag: i === 0 ? situation : undefined,
+    }));
+  }
+
+  // Fallback: tidak ada bold header — pecah berdasarkan paragraf
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => p.replace(/\n/g, " ").trim())
+    .filter((p) => p.length > 10);
+
+  if (paragraphs.length === 0) {
+    return [{ num: 1, label: "Jawaban", content: text, accent: "primary", tag: situation }];
+  }
+
+  const sectionLabels = ["Jawaban", "Penjelasan", "Berdasarkan Konteks", "Saran Praktis", "Catatan"];
+  return paragraphs.slice(0, 5).map((content, i) => ({
+    num: i + 1,
+    label: sectionLabels[i] ?? `Bagian ${i + 1}`,
+    content,
+    accent: accents[i % accents.length],
+    tag: i === 0 ? situation : undefined,
+  }));
+}
 
 // ── Accent color helpers ─────────────────────────────────────────────────────
 const accentBg: Record<StructuredSection["accent"], string> = {
@@ -144,7 +183,7 @@ function AskSmanuContent() {
     });
   }
 
-  function handleSend(e?: React.FormEvent) {
+  async function handleSend(e?: React.FormEvent) {
     e?.preventDefault();
     const text = inputText.trim();
     if (!text || status === "loading" || status === "streaming") return;
@@ -160,24 +199,103 @@ function AskSmanuContent() {
     setInputText("");
     setStatus("loading");
 
-    // Simulate streaming — replace with real RAG call in Phase 2
-    setTimeout(() => {
+    // ── Panggil /api/nutripath → Langflow ──────────────────
+    try {
+      const res = await fetch("/api/nutripath", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          situation,
+          availableFoods: food,
+          budget,
+          question: text,
+          sessionId: crypto.randomUUID(),
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || `HTTP ${res.status}`);
+      }
+
+      if (!res.body) throw new Error("Tidak ada stream dari server");
+
       setStatus("streaming");
-      setTimeout(() => {
-        const aiMsg: Message = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          sections: mockResponse,
-          timestamp: now(),
-          knowledgeSource: {
-            title: "Basic Nutrition · Proteins",
-            score: "0.94",
+
+      // ── Baca SSE stream ────────────────────────────────────
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+      let source = "langflow";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (!data) continue;
+
+          try {
+            const event = JSON.parse(data);
+            if (event.type === "meta") {
+              source = event.source ?? "langflow";
+            } else if (event.type === "token") {
+              fullText += event.content;
+            } else if (event.type === "done") {
+              // stream selesai — parse teks → sections
+              break;
+            }
+          } catch {
+            // skip malformed event
+          }
+        }
+      }
+
+      // ── Parse jawaban Langflow → StructuredSection[] ──────
+      const sections = parseLangflowText(fullText, situation);
+
+      const aiMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        sections: sections.length > 0
+          ? sections
+          : [{ num: 1, label: "Jawaban", content: fullText || "Tidak ada jawaban.", accent: "primary", tag: situation }],
+        timestamp: now(),
+        knowledgeSource: {
+          title: source === "langflow" ? "Langflow RAG · Astra DB" : "Knowledge Base",
+          score: "—",
+        },
+      };
+
+      setMessages((prev) => [...prev, aiMsg]);
+      setStatus("done");
+    } catch (err) {
+      const errorMsg: Message = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        sections: [
+          {
+            num: 1,
+            label: "Error",
+            content: err instanceof Error
+              ? err.message
+              : "Gagal menghubungi server. Pastikan Langflow berjalan dan LANGFLOW_API_KEY sudah di-set.",
+            accent: "primary",
           },
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-        setStatus("done");
-      }, 600);
-    }, 800);
+        ],
+        timestamp: now(),
+        knowledgeSource: { title: "Error", score: "—" },
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      setStatus("error");
+    }
   }
 
   function fillSuggestion(text: string) {
@@ -205,7 +323,7 @@ function AskSmanuContent() {
           </span>
           <span className="text-base text-[#C6C6CD] select-none">·</span>
           <span className="text-sm text-[#45464D]">
-            Nutrition query interface — RAG pipeline connects in Phase 2
+            Nutrition query interface — connected to Langflow RAG
           </span>
         </div>
         {/* Row 2: privacy note */}
@@ -567,9 +685,9 @@ function AskSmanuContent() {
                 Answer based on context and sources
               </span>
               <span className="text-[11px] text-[#526175] leading-4">
-                Generative model: not yet determined
+                Generative model: Langflow flow
                 <br />
-                Orchestration: Langflow RAG
+                Orchestration: Langflow RAG · Astra DB
               </span>
             </div>
           </div>
