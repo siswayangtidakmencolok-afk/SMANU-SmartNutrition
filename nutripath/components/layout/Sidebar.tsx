@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
+import { useHistory } from "@/context/HistoryContext";
 
 const mainNav = [
   {
@@ -98,6 +99,7 @@ interface SidebarProps {
 
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { count } = useHistory();
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -128,6 +130,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         <nav className="space-y-1 text-sm font-medium">
           {mainNav.map((item) => {
             const active = isActive(item.href);
+            const isHistory = item.href === "/history";
             return (
               <Link
                 key={item.href}
@@ -141,7 +144,12 @@ export function Sidebar({ onClose }: SidebarProps) {
                 )}
               >
                 {item.svg}
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {isHistory && count > 0 && (
+                  <span className="ml-auto px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold border border-emerald-500/30">
+                    {count}
+                  </span>
+                )}
               </Link>
             );
           })}

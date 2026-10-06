@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
+import { useHistory } from "@/context/HistoryContext";
+import { HistorySession } from "@/lib/history-store";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type QueryStatus = "idle" | "loading" | "streaming" | "done" | "error";
@@ -96,6 +98,7 @@ export default function AskSmanuPage() {
 // ── Chat content ──────────────────────────────────────────────────────────────
 function AskSmanuContent() {
   const searchParams = useSearchParams();
+  const { addSession } = useHistory();
 
   // Context
   const [situation, setSituation] = useState("School Day");
@@ -192,6 +195,22 @@ function AskSmanuContent() {
       };
       setMessages((prev) => [...prev, aiMsg]);
       setStatus("done");
+
+      // ── Save to session history ────────────────────────────────
+      const session: HistorySession = {
+        id: crypto.randomUUID(),
+        question: text,
+        answer: fullText || "Tidak ada jawaban dari server.",
+        situation,
+        budget,
+        food,
+        messages: [
+          { role: "user", text },
+          { role: "assistant", text: fullText || "" },
+        ],
+        timestamp: Date.now(),
+      };
+      addSession(session);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan. Silakan coba lagi.";
       const displayMsg = msg.includes("fetch") || msg.includes("network")

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SmanuLogo } from "@/components/SmanuLogo";
 
 export default function AboutPage() {
   return (
@@ -11,6 +12,11 @@ export default function AboutPage() {
         title="About SMANU"
         subtitle="SmartNutrition for Students — an educational AI nutrition assistant."
       />
+
+      {/* Full logo */}
+      <div className="flex justify-center py-4 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 rounded-xl">
+        <SmanuLogo variant="full" className="w-full max-w-sm h-auto" />
+      </div>
 
       {/* Hero card */}
       <div className="rounded-xl overflow-hidden bg-gradient-to-br from-[--color-primary] to-[--color-inverse-surface] p-6 text-[--color-on-primary]">
