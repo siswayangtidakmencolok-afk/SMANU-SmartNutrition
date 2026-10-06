@@ -12,9 +12,6 @@ export const runtime = "nodejs";
 // Body: { topicId: string, section: string }
 // ─────────────────────────────────────────────────────────────
 
-const LANGFLOW_SERVER_URL =
-  process.env.LANGFLOW_SERVER_URL || "http://localhost:7860";
-
 const LANGFLOW_FLOW_ID =
   process.env.LANGFLOW_FLOW_ID || "1a3246ec-c6c7-44d5-9509-66a623466633";
 
@@ -122,10 +119,11 @@ export async function POST(req: NextRequest) {
     // Try Langflow first
     // ─────────────────────────────────────────────────────────
     const apiKey = process.env.LANGFLOW_API_KEY;
+    const serverUrl = process.env.LANGFLOW_SERVER_URL;
     const queryMap = TOPIC_QUERIES[topicId];
     const query = queryMap?.[section];
 
-    if (apiKey && query) {
+    if (apiKey && serverUrl && query) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30_000);
@@ -135,7 +133,7 @@ export async function POST(req: NextRequest) {
         let langflowRes: Response;
         try {
           langflowRes = await fetch(
-            `${LANGFLOW_SERVER_URL}/api/v1/run/${LANGFLOW_FLOW_ID}`,
+            `${serverUrl}/api/v1/run/${LANGFLOW_FLOW_ID}`,
             {
               method: "POST",
               headers: {

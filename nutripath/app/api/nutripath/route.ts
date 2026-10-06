@@ -6,11 +6,6 @@ export const runtime = "nodejs";
 // Langflow configuration
 // ─────────────────────────────────────────────────────────────
 
-// Selalu set LANGFLOW_SERVER_URL di .env.local
-// Default: localhost — tapi perilaku resolve IPv4/IPv6 tergantung sistem
-const LANGFLOW_SERVER_URL =
-  process.env.LANGFLOW_SERVER_URL || "http://localhost:7860";
-
 const LANGFLOW_FLOW_ID =
   process.env.LANGFLOW_FLOW_ID ||
   "1a3246ec-c6c7-44d5-9509-66a623466633";
@@ -57,13 +52,30 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.LANGFLOW_API_KEY;
 
     if (!apiKey) {
-      console.error("LANGFLOW_API_KEY is not configured");
+      // Log only on server — never expose to client
+      console.error("[nutripath] LANGFLOW_API_KEY is not set in environment");
       return new Response(
         JSON.stringify({
-          error: "LANGFLOW_API_KEY belum dikonfigurasi di environment server.",
+          error: "AI service belum dikonfigurasi di server. Hubungi administrator.",
         }),
         {
-          status: 500,
+          status: 503,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Validate that LANGFLOW_SERVER_URL is set and is not a localhost URL
+    // when running on a hosted environment (Vercel / production)
+    const serverUrl = process.env.LANGFLOW_SERVER_URL;
+    if (!serverUrl) {
+      console.error("[nutripath] LANGFLOW_SERVER_URL is not set in environment");
+      return new Response(
+        JSON.stringify({
+          error: "AI service belum dikonfigurasi di server. Hubungi administrator.",
+        }),
+        {
+          status: 503,
           headers: { "Content-Type": "application/json" },
         }
       );
@@ -96,15 +108,10 @@ Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedi
     // Langflow endpoint
     // ─────────────────────────────────────────────────────────
 
-    const langflowUrl = `${LANGFLOW_SERVER_URL}/api/v1/run/${LANGFLOW_FLOW_ID}`;
+    const langflowUrl = `${serverUrl}/api/v1/run/${LANGFLOW_FLOW_ID}`;
 
-    console.log("────────────────────────────────────────────");
-    console.log("SMANU → Langflow");
-    console.log("URL:", langflowUrl);
-    console.log("Flow ID:", LANGFLOW_FLOW_ID);
-    console.log("Session:", currentSessionId);
-    console.log("Situation:", situation, "| Budget:", budget);
-    console.log("────────────────────────────────────────────");
+    // Log non-secret diagnostic info only (no API key, no URL with embedded credentials)
+    console.log("[nutripath] request →", LANGFLOW_FLOW_ID, "| session:", currentSessionId, "| situation:", situation);
 
     // ─────────────────────────────────────────────────────────
     // Call Langflow
@@ -140,16 +147,12 @@ Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedi
     // ─────────────────────────────────────────────────────────
 
     if (!langflowResponse.ok) {
-      const errorText = await langflowResponse.text();
-      console.error("Langflow HTTP error:", {
-        status: langflowResponse.status,
-        body: errorText,
-      });
+      // Log status on server only — never forward raw Langflow body to client
+      // (it may contain internal credentials, headers, or token details)
+      console.error("[nutripath] Langflow HTTP error:", langflowResponse.status);
       return new Response(
         JSON.stringify({
-          error: "Langflow gagal memproses pertanyaan.",
-          status: langflowResponse.status,
-          details: errorText,
+          error: "Maaf, SMANU AI sedang mengalami masalah. Silakan coba lagi.",
         }),
         {
           status: 502,
