@@ -6,11 +6,10 @@ export const runtime = "nodejs";
 // Langflow configuration
 // ─────────────────────────────────────────────────────────────
 
-// PENTING: gunakan 127.0.0.1 bukan localhost
-// Node.js 18+ meresolve "localhost" ke ::1 (IPv6 first) yang menyebabkan
-// ECONNREFUSED saat Langflow hanya listen di 127.0.0.1 (IPv4)
+// Selalu set LANGFLOW_SERVER_URL di .env.local
+// Default: localhost — tapi perilaku resolve IPv4/IPv6 tergantung sistem
 const LANGFLOW_SERVER_URL =
-  process.env.LANGFLOW_SERVER_URL || "http://127.0.0.1:7860";
+  process.env.LANGFLOW_SERVER_URL || "http://localhost:7860";
 
 const LANGFLOW_FLOW_ID =
   process.env.LANGFLOW_FLOW_ID ||
@@ -241,10 +240,23 @@ Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedi
       },
     });
   } catch (error: unknown) {
+    // Log detail error di server untuk debugging
     console.error("SMANU Langflow API error:", error);
-    const message =
-      error instanceof Error ? error.message : "Internal server error";
-    return new Response(JSON.stringify({ error: message }), {
+
+    // Tentukan pesan yang tepat berdasarkan jenis error
+    let userMessage = "Tidak dapat terhubung ke SMANU AI. Silakan coba lagi.";
+
+    if (error instanceof Error) {
+      if (error.message.includes("ECONNREFUSED") || error.message.includes("fetch failed")) {
+        userMessage = "Tidak dapat terhubung ke Langflow. Pastikan Langflow Desktop sedang berjalan.";
+      } else if (error.message.includes("ABORT_ERR") || error.message.includes("aborted")) {
+        userMessage = "Permintaan melebihi batas waktu. Silakan coba lagi.";
+      } else if (error.message.includes("LANGFLOW_API_KEY")) {
+        userMessage = "Konfigurasi server belum lengkap. Hubungi administrator.";
+      }
+    }
+
+    return new Response(JSON.stringify({ error: userMessage }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
