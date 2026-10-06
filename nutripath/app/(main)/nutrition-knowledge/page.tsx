@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -137,10 +138,14 @@ export default function NutritionKnowledgePage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((topic) => (
-            <Card
+            <Link
               key={topic.id}
+              href={`/nutrition-knowledge/${topic.id}`}
+              className="block group"
+            >
+            <Card
               padding="none"
-              className="flex flex-col overflow-hidden hover:shadow-md transition-shadow group cursor-pointer"
+              className="flex flex-col overflow-hidden hover:shadow-md transition-shadow cursor-pointer h-full"
             >
               {/* Image */}
               <div className="h-36 overflow-hidden bg-[--color-surface-container] relative flex-shrink-0">
@@ -184,14 +189,15 @@ export default function NutritionKnowledgePage() {
               {/* CTA */}
               <div className="px-4 pb-4">
                 <div className="flex items-center justify-between pt-3 border-t border-[--color-outline-variant]/50">
-                  <span className="text-xs font-semibold text-[--color-secondary] flex items-center gap-1">
-                    Coming soon
-                    <span className="material-symbols-outlined text-[14px]">lock_clock</span>
+                  <span className="text-xs font-semibold text-[--color-secondary] flex items-center gap-1 group-hover:underline">
+                    Explore topic
+                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
                   </span>
                   <Badge variant="neutral">Knowledge Base</Badge>
                 </div>
               </div>
             </Card>
+            </Link>
           ))}
         </div>
       )}
@@ -200,8 +206,8 @@ export default function NutritionKnowledgePage() {
       <Card variant="low" className="flex items-center gap-3">
         <span className="material-symbols-outlined text-[--color-secondary] text-[20px]">verified</span>
         <p className="text-xs text-[--color-on-surface-variant]">
-          All knowledge topics are sourced from peer-reviewed nutrition literature and will be
-          available for AI-assisted exploration when the RAG pipeline is connected.
+          All knowledge topics are sourced from peer-reviewed nutrition literature and served via
+          the NutriPath RAG pipeline (Langflow + Astra DB). Local knowledge base is used as fallback.
         </p>
       </Card>
     </div>
