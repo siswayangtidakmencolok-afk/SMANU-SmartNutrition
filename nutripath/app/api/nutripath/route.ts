@@ -6,8 +6,11 @@ export const runtime = "nodejs";
 // Langflow configuration
 // ─────────────────────────────────────────────────────────────
 
+// PENTING: gunakan 127.0.0.1 bukan localhost
+// Node.js 18+ meresolve "localhost" ke ::1 (IPv6 first) yang menyebabkan
+// ECONNREFUSED saat Langflow hanya listen di 127.0.0.1 (IPv4)
 const LANGFLOW_SERVER_URL =
-  process.env.LANGFLOW_SERVER_URL || "http://localhost:7860";
+  process.env.LANGFLOW_SERVER_URL || "http://127.0.0.1:7860";
 
 const LANGFLOW_FLOW_ID =
   process.env.LANGFLOW_FLOW_ID ||
