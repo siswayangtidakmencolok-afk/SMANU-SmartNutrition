@@ -1,144 +1,249 @@
 import { NextRequest } from "next/server";
-import OpenAI from "openai";
-import {
-  retrieveRelevantChunks,
-  buildKnowledgeContext,
-  buildSystemPrompt,
-  UserContext,
-} from "@/lib/rag-retrieval";
 
-// Use Node.js runtime for better compatibility
+export const runtime = "nodejs";
+
+// ─────────────────────────────────────────────────────────────
+// Langflow configuration
+// ─────────────────────────────────────────────────────────────
+
+// PENTING: gunakan 127.0.0.1 bukan localhost
+// Node.js 18+ meresolve "localhost" ke ::1 (IPv6 first) yang menyebabkan
+// ECONNREFUSED saat Langflow hanya listen di 127.0.0.1 (IPv4)
+const LANGFLOW_SERVER_URL =
+  process.env.LANGFLOW_SERVER_URL || "http://127.0.0.1:7860";
+
+const LANGFLOW_FLOW_ID =
+  process.env.LANGFLOW_FLOW_ID ||
+  "1a3246ec-c6c7-44d5-9509-66a623466633";
+
+// ─────────────────────────────────────────────────────────────
+// POST /api/nutripath
+//
+// Browser → Next.js API → Langflow → Astra DB RAG → LLM → Browser
+// ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { situation, availableFoods, budget, question } = body;
 
-    if (!question || !situation) {
-      return new Response(JSON.stringify({ error: "Missing required fields: situation and question" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const userContext: UserContext = {
+    const {
       situation,
       availableFoods,
       budget,
       question,
-    };
+      sessionId,
+      session_id,
+    } = body;
 
-    // ── RAG Step 1: Retrieve relevant knowledge chunks ──
-    const retrievedChunks = retrieveRelevantChunks(userContext, 5);
+    // ─────────────────────────────────────────────────────────
+    // Validate request
+    // ─────────────────────────────────────────────────────────
 
-    // ── RAG Step 2: Build knowledge context string ──
-    const knowledgeContext = buildKnowledgeContext(retrievedChunks);
-
-    // ── RAG Step 3: Build system prompt with context ──
-    const systemPrompt = buildSystemPrompt(userContext, knowledgeContext);
-
-    // ── RAG Step 4: Stream LLM response ──
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      // Demo mode: return mock structured response
-      const mockResponse = buildMockResponse(userContext, retrievedChunks);
-      const encoder = new TextEncoder();
-      const stream = new ReadableStream({
-        start(controller) {
-          const metaPayload = JSON.stringify({
-            type: "meta",
-            chunks: retrievedChunks.map((c) => ({
-              id: c.entry.id,
-              category: c.entry.category,
-              title: c.entry.title,
-              matchedTerms: c.matchedTerms,
-              score: Math.round(c.score * 10) / 10,
-            })),
-          });
-          controller.enqueue(encoder.encode(`data: ${metaPayload}\n\n`));
-
-          // Stream mock response word by word
-          const words = mockResponse.split(" ");
-          let i = 0;
-          const interval = setInterval(() => {
-            if (i < words.length) {
-              const chunk = JSON.stringify({ type: "token", content: words[i] + " " });
-              controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
-              i++;
-            } else {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
-              controller.close();
-              clearInterval(interval);
-            }
-          }, 30);
-        },
-      });
-      return new Response(stream, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
+    if (!question || !situation) {
+      return new Response(
+        JSON.stringify({
+          error: "Missing required fields: situation and question",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-    const openai = new OpenAI({ apiKey });
+    // ─────────────────────────────────────────────────────────
+    // Validate Langflow API key
+    // ─────────────────────────────────────────────────────────
+
+    const apiKey = process.env.LANGFLOW_API_KEY;
+
+    if (!apiKey) {
+      console.error("LANGFLOW_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({
+          error: "LANGFLOW_API_KEY belum dikonfigurasi di environment server.",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Session ID
+    // ─────────────────────────────────────────────────────────
+
+    const currentSessionId = sessionId || session_id || crypto.randomUUID();
+
+    // ─────────────────────────────────────────────────────────
+    // Build input_value — gabungkan context siswa ke dalam
+    // satu pesan untuk Langflow ChatInput
+    // ─────────────────────────────────────────────────────────
+
+    const inputValue = `
+Konteks siswa:
+- Situasi: ${situation}
+- Makanan yang tersedia: ${availableFoods || "tidak disebutkan"}
+- Budget: ${budget || "tidak disebutkan"}
+
+Pertanyaan siswa:
+${question}
+
+Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedia pada RAG flow. Gunakan informasi yang ditemukan melalui retrieval Astra DB. Jika informasi yang dibutuhkan tidak tersedia dalam knowledge base, katakan dengan jelas bahwa informasi tersebut tidak ditemukan.
+`.trim();
+
+    // ─────────────────────────────────────────────────────────
+    // Langflow endpoint
+    // ─────────────────────────────────────────────────────────
+
+    const langflowUrl = `${LANGFLOW_SERVER_URL}/api/v1/run/${LANGFLOW_FLOW_ID}`;
+
+    console.log("────────────────────────────────────────────");
+    console.log("SMANU → Langflow");
+    console.log("URL:", langflowUrl);
+    console.log("Flow ID:", LANGFLOW_FLOW_ID);
+    console.log("Session:", currentSessionId);
+    console.log("Situation:", situation, "| Budget:", budget);
+    console.log("────────────────────────────────────────────");
+
+    // ─────────────────────────────────────────────────────────
+    // Call Langflow
+    // ─────────────────────────────────────────────────────────
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120_000);
+
+    let langflowResponse: Response;
+
+    try {
+      langflowResponse = await fetch(langflowUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          input_value: inputValue,
+          input_type: "chat",
+          output_type: "chat",
+          session_id: currentSessionId,
+        }),
+        signal: controller.signal,
+        cache: "no-store",
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Handle Langflow HTTP error
+    // ─────────────────────────────────────────────────────────
+
+    if (!langflowResponse.ok) {
+      const errorText = await langflowResponse.text();
+      console.error("Langflow HTTP error:", {
+        status: langflowResponse.status,
+        body: errorText,
+      });
+      return new Response(
+        JSON.stringify({
+          error: "Langflow gagal memproses pertanyaan.",
+          status: langflowResponse.status,
+          details: errorText,
+        }),
+        {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Parse Langflow response
+    // ─────────────────────────────────────────────────────────
+
+    const langflowData = await langflowResponse.json();
+    const answer = extractLangflowAnswer(langflowData);
+
+    if (!answer) {
+      console.error(
+        "Tidak menemukan text jawaban di response Langflow:",
+        JSON.stringify(langflowData, null, 2)
+      );
+      return new Response(
+        JSON.stringify({
+          error:
+            "Langflow berhasil dipanggil, tetapi ChatOutput tidak mengandung jawaban yang dapat dibaca.",
+        }),
+        {
+          status: 502,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────
+    // Stream SSE response ke frontend
+    //
+    // Protocol:
+    //   data: { type: "meta", source: "langflow", chunks: [], sessionId }
+    //   data: { type: "token", content: "<full answer>" }
+    //   data: { type: "done" }
+    // ─────────────────────────────────────────────────────────
+
+    const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
+      start(ctrl) {
+        try {
+          // META — beri tahu frontend bahwa ini dari Langflow
+          ctrl.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                type: "meta",
+                source: "langflow",
+                orchestration: "Langflow RAG",
+                flowId: LANGFLOW_FLOW_ID,
+                sessionId: currentSessionId,
+                // chunks kosong agar frontend lama tidak crash pada .map()
+                chunks: [],
+              })}\n\n`
+            )
+          );
 
-        // First, send metadata about retrieved chunks
-        const metaPayload = JSON.stringify({
-          type: "meta",
-          chunks: retrievedChunks.map((c) => ({
-            id: c.entry.id,
-            category: c.entry.category,
-            title: c.entry.title,
-            matchedTerms: c.matchedTerms,
-            score: Math.round(c.score * 10) / 10,
-          })),
-        });
-        controller.enqueue(encoder.encode(`data: ${metaPayload}\n\n`));
+          // TOKEN — kirim full answer
+          ctrl.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ type: "token", content: answer })}\n\n`
+            )
+          );
 
-        // Stream the LLM response
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: `My situation: ${situation}\nAvailable foods: ${availableFoods || "not specified"}\nBudget: ${budget || "not specified"}\nMy question: ${question}`,
-            },
-          ],
-          stream: true,
-          max_tokens: 1200,
-          temperature: 0.4,
-        });
+          // DONE
+          ctrl.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`)
+          );
 
-        for await (const chunk of completion) {
-          const content = chunk.choices[0]?.delta?.content || "";
-          if (content) {
-            const payload = JSON.stringify({ type: "token", content });
-            controller.enqueue(encoder.encode(`data: ${payload}\n\n`));
-          }
+          ctrl.close();
+        } catch (streamError) {
+          console.error("SSE stream error:", streamError);
+          ctrl.error(streamError);
         }
-
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
-        controller.close();
       },
     });
 
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
       },
     });
   } catch (error: unknown) {
-    console.error("NutriPath API error:", error);
-    const message = error instanceof Error ? error.message : "Internal server error";
+    console.error("SMANU Langflow API error:", error);
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
@@ -146,32 +251,63 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────
-// Demo mode: mock response when no OpenAI key is present
-// ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// Extract answer text from Langflow /api/v1/run/{flow_id} response
+// ─────────────────────────────────────────────────────────────
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildMockResponse(ctx: UserContext, chunks: any[]): string {
-  const topChunk = chunks[0]?.entry;
-  const foodList = ctx.availableFoods || "pilihan yang ada";
-  const budget = ctx.budget ? ` dengan budget ${ctx.budget}` : "";
+function extractLangflowAnswer(data: any): string {
+  // Format utama Langflow v1.12
+  const candidates = [
+    data?.outputs?.[0]?.outputs?.[0]?.results?.message?.text,
+    data?.outputs?.[0]?.outputs?.[0]?.results?.message?.content,
+    data?.outputs?.[0]?.outputs?.[0]?.results?.text,
+    data?.outputs?.[0]?.outputs?.[0]?.message?.text,
+    data?.outputs?.[0]?.outputs?.[0]?.message?.content,
+  ];
 
-  return `**Main Answer**
-Berdasarkan situasi kamu (${ctx.situation}) dan pilihan makanan yang tersedia (${foodList})${budget}, berikut rekomendasi yang sesuai dari knowledge base NutriPath.
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
 
-Dari informasi gizi yang tersedia [Knowledge 1], pilihan terbaik adalah mengombinasikan sumber karbohidrat, protein, dan sayuran untuk membentuk piring makan yang seimbang. Ini membantu mempertahankan energi dan konsentrasi sepanjang hari sekolah.
+  // Fallback recursive search jika struktur berubah
+  return findTextRecursively(data) || "";
+}
 
-**Why This Matters**
-Menurut Pedoman Gizi Seimbang Kemenkes RI [Knowledge 1], sebuah makanan yang seimbang harus mengandung: ½ piring sayur dan buah, ¼ piring karbohidrat kompleks, dan ¼ piring protein. Kombinasi ini memastikan kamu mendapatkan energi yang stabil, bukan lonjakan gula yang cepat habis.
+function findTextRecursively(value: unknown, depth = 0): string {
+  if (depth > 8) return "";
 
-${topChunk ? `Informasi dari knowledge base tentang "${topChunk.title}" menunjukkan bahwa [Knowledge 2]: ${topChunk.content.substring(0, 200)}...` : ""}
+  if (typeof value === "string") {
+    const text = value.trim();
+    return text.length > 20 ? text : "";
+  }
 
-**Practical Suggestion**
-Dengan pilihan yang kamu sebutkan${budget}, prioritaskan: (1) Pilih sumber protein seperti telur, tahu, atau tempe — terjangkau dan bergizi tinggi. (2) Tambahkan sayuran jika tersedia, meski hanya porsi kecil. (3) Pilih air putih daripada minuman manis untuk tetap terhidrasi tanpa tambahan gula berlebih.
+  if (!value || typeof value !== "object") return "";
 
-**What to Watch For**
-- Hindari mengganti makan siang dengan jajanan gorengan saja — kandungan gizi rendah dan energi cepat habis [Knowledge 3].
-- Jika mengonsumsi mie instan, tambahkan telur dan sayuran untuk meningkatkan nilai gizinya [Knowledge 2].
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findTextRecursively(item, depth + 1);
+      if (found) return found;
+    }
+    return "";
+  }
 
-**Responsible AI Note**
-ℹ️ Informasi ini bersifat edukatif dan bukan nasihat medis. NutriPath membantu kamu memahami prinsip gizi umum berdasarkan knowledge base yang terstruktur. Untuk kondisi kesehatan khusus atau kebutuhan gizi spesifik, konsultasikan dengan ahli gizi atau dokter yang berkualifikasi.`;
+  const obj = value as Record<string, unknown>;
+
+  // Prioritaskan field yang biasanya mengandung output Langflow
+  for (const key of ["text", "content", "message"]) {
+    if (key in obj) {
+      const found = findTextRecursively(obj[key], depth + 1);
+      if (found) return found;
+    }
+  }
+
+  for (const key of Object.keys(obj)) {
+    const found = findTextRecursively(obj[key], depth + 1);
+    if (found) return found;
+  }
+
+  return "";
 }
