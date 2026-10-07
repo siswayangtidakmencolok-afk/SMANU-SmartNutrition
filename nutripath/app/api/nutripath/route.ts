@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { retrieveRelevantChunks, buildKnowledgeContext, buildSystemPrompt } from "@/lib/rag-retrieval";
 
 export const runtime = "nodejs";
 
@@ -91,6 +93,14 @@ ${question}
 
 Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedia pada RAG flow. Gunakan informasi yang ditemukan melalui retrieval Astra DB. Jika informasi yang dibutuhkan tidak tersedia dalam knowledge base, katakan dengan jelas bahwa informasi tersebut tidak ditemukan.
 `.trim();
+
+    // Store context for Gemini fallback (used if Langflow is unreachable)
+    _lastRequestContext = {
+      situation,
+      availableFoods: availableFoods || undefined,
+      budget: budget || undefined,
+      question,
+    };
 
     // ─────────────────────────────────────────────────────────
     // Langflow endpoint
@@ -240,21 +250,29 @@ Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedi
       },
     });
   } catch (error: unknown) {
-    // Log detail error di server untuk debugging
     console.error("SMANU Langflow API error:", error);
 
-    // Tentukan pesan yang tepat berdasarkan jenis error
-    let userMessage = "Tidak dapat terhubung ke SMANU AI. Silakan coba lagi.";
+    // ── Gemini fallback ───────────────────────────────────
+    // If Langflow is unreachable (localhost not running, cloud not configured),
+    // try answering with Gemini + local RAG knowledge base.
+    // The SSE output format is identical so the frontend needs no changes.
+    const isConnError =
+      error instanceof Error &&
+      (error.message.includes("ECONNREFUSED") ||
+        error.message.includes("fetch failed") ||
+        error.message.includes("ABORT_ERR") ||
+        error.message.includes("aborted") ||
+        error.message.includes("network"));
 
-    if (error instanceof Error) {
-      if (error.message.includes("ECONNREFUSED") || error.message.includes("fetch failed")) {
-        userMessage = "Tidak dapat terhubung ke Langflow. Pastikan Langflow Desktop sedang berjalan.";
-      } else if (error.message.includes("ABORT_ERR") || error.message.includes("aborted")) {
-        userMessage = "Permintaan melebihi batas waktu. Silakan coba lagi.";
-      } else if (error.message.includes("LANGFLOW_API_KEY")) {
-        userMessage = "Konfigurasi server belum lengkap. Hubungi administrator.";
-      }
+    if (isConnError) {
+      const body = await tryGeminiRagFallback(error);
+      if (body) return body;
     }
+
+    const userMessage =
+      error instanceof Error && error.message.includes("LANGFLOW_API_KEY")
+        ? "Konfigurasi server belum lengkap. Hubungi administrator."
+        : "Tidak dapat terhubung ke SMANU AI. Silakan coba lagi.";
 
     return new Response(JSON.stringify({ error: userMessage }), {
       status: 500,
@@ -262,6 +280,90 @@ Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedi
     });
   }
 }
+
+// ─────────────────────────────────────────────────────────────
+// Gemini RAG fallback
+// Used when Langflow is unreachable (local dev without Desktop running,
+// or production before Langflow Cloud is configured).
+// Reads GEMINI_API_KEY server-side — never exposed to browser.
+// ─────────────────────────────────────────────────────────────
+
+async function tryGeminiRagFallback(
+  originalError: unknown
+): Promise<Response | null> {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) {
+    console.warn("[nutripath] Gemini fallback skipped — GEMINI_API_KEY not set");
+    return null;
+  }
+
+  // We need to re-read the request body — but it's already been consumed.
+  // We stored the relevant fields in the closure of the caller. Since we can't
+  // pass them here easily, we use a module-level store set before the Langflow call.
+  const ctx = _lastRequestContext;
+  if (!ctx) return null;
+
+  try {
+    console.log("[nutripath] Langflow unreachable, trying Gemini RAG fallback");
+
+    // Retrieve relevant chunks from local knowledge base
+    const chunks = retrieveRelevantChunks(ctx, 5);
+    const knowledgeContext = buildKnowledgeContext(chunks);
+    const systemPrompt = buildSystemPrompt(ctx, knowledgeContext);
+
+    const genAI = new GoogleGenerativeAI(geminiKey);
+    // gemini-flash-lite-latest: confirmed working with AQ. keys
+    const model = genAI.getGenerativeModel({
+      model: "gemini-flash-lite-latest",
+      generationConfig: { temperature: 0.35, maxOutputTokens: 800 },
+    });
+
+    const result = await model.generateContent([
+      { text: systemPrompt },
+      { text: `Pertanyaan siswa: ${ctx.question}` },
+    ]);
+
+    const answer = result.response.text().trim();
+    if (!answer) return null;
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(ctrl) {
+        ctrl.enqueue(encoder.encode(
+          `data: ${JSON.stringify({
+            type: "meta",
+            source: "gemini-rag-fallback",
+            orchestration: "Gemini + Local KB",
+            chunks: chunks.map((c) => c.entry.title),
+          })}\n\n`
+        ));
+        ctrl.enqueue(encoder.encode(
+          `data: ${JSON.stringify({ type: "token", content: answer })}\n\n`
+        ));
+        ctrl.enqueue(encoder.encode(
+          `data: ${JSON.stringify({ type: "done" })}\n\n`
+        ));
+        ctrl.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  } catch (fallbackErr) {
+    console.error("[nutripath] Gemini fallback also failed:", fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr));
+    return null;
+  }
+}
+
+// Module-level store so the fallback function can access request context
+// after the request body has been read.
+let _lastRequestContext: import("@/lib/rag-retrieval").UserContext | null = null;
 
 // ─────────────────────────────────────────────────────────────
 // Extract answer text from Langflow /api/v1/run/{flow_id} response

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { HistoryProvider } from "@/context/HistoryContext";
+import { AiChatWidget } from "@/components/AiChatWidget";
 
 // Pages that need full-height viewport (no padding) — chat interface
 const FULLSCREEN_PAGES = ["/ask-smanu"];
@@ -50,6 +51,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
       </div>
+
+      {/* SMANU AI Assistant — floating widget (Gemini), independent of Langflow) */}
+      <AiChatWidget />
     </HistoryProvider>
   );
 }
