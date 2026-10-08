@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SituationSelector } from "@/components/SituationSelector";
+import { NutriQuest } from "@/components/NutriQuest";
 
 const dietaryOptions = [
   { id: "none", label: "No restrictions" },
@@ -252,6 +253,9 @@ export default function MyContextPage() {
           </div>
         </Card>
       )}
+
+      {/* ── NutriQuest ── */}
+      <NutriQuest userName="SMANU Student" />
     </div>
   );
 }
