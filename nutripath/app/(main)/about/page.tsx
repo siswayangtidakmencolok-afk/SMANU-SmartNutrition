@@ -151,7 +151,7 @@ export default function AboutPage() {
         <div className="grid grid-cols-2 gap-2">
           {/* TikTok */}
           <a
-            href="https://www.tiktok.com/@eksrovertselalu"
+            href="https://www.tiktok.com/@ekstrovertselalu"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-slate-200 hover:border-slate-400 hover:bg-slate-50 transition-all group"
