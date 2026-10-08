@@ -281,7 +281,7 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
 
   const completedDate = useRef(
     new Date().toLocaleDateString("id-ID", {
-      day: "long", month: "long", year: "numeric",
+      day: "numeric", month: "long", year: "numeric",
     })
   );
 
@@ -334,7 +334,7 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
       return;
     }
     completedDate.current = new Date().toLocaleDateString("id-ID", {
-      day: "long", month: "long", year: "numeric",
+      day: "numeric", month: "long", year: "numeric",
     });
     setPhase("result");
   }
