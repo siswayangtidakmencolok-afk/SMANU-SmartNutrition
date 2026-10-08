@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 const pageTitles: Record<string, string> = {
   "/": "Dashboard",
@@ -13,6 +13,7 @@ const pageTitles: Record<string, string> = {
   "/how-it-works": "How It Works",
   "/settings": "Settings",
   "/help": "Help & Responsible AI",
+  "/search": "Search Knowledge Base",
 };
 
 interface HeaderProps {
@@ -23,6 +24,17 @@ export function Header({ onMenuClick }: HeaderProps) {
   const pathname = usePathname();
   const pageTitle = pageTitles[pathname] ?? "SMANU";
   const [search, setSearch] = useState("");
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = search.trim();
+    if (!q) return;
+    router.push(`/search?q=${encodeURIComponent(q)}`);
+    setSearch("");
+    inputRef.current?.blur();
+  };
 
   return (
     <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 z-20 shrink-0">
@@ -45,20 +57,21 @@ export function Header({ onMenuClick }: HeaderProps) {
 
       {/* Center: search bar */}
       <div className="flex-1 max-w-2xl px-4">
-        <div className="relative w-full">
+        <form onSubmit={handleSearchSubmit} className="relative w-full">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.15z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} />
             </svg>
           </div>
           <input
+            ref={inputRef}
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari makanan, nutrisi, atau pertanyaan..."
             className="block w-full pl-10 pr-4 py-2 border border-slate-200 rounded-full text-sm bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
           />
-        </div>
+        </form>
       </div>
 
       {/* Right: notifications + profile */}
