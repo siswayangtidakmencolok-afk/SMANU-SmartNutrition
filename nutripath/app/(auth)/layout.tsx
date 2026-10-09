@@ -1,18 +1,18 @@
 /**
- * app/(auth)/layout.tsx — Auth pages layout
- * Clean, centered layout for login and register pages.
- * No sidebar, no header — standalone auth flow.
+ * app/(auth)/layout.tsx
+ * Full-screen split layout for login & register.
+ * Left panel (visual) + Right panel (form) rendered by each page.
  */
 
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "SMANU — Masuk",
+  title: "SMANU — SmartNutrition for Students",
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4">
+    <div className="min-h-screen w-full bg-[#0b1c30] overflow-x-hidden">
       {children}
     </div>
   );
