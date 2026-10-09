@@ -1,9 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { clsx } from "clsx";
+import { signOut } from "next-auth/react";
 import { useHistory } from "@/context/HistoryContext";
+import { useAuth } from "@/context/AuthContext";
+import { useState } from "react";
 
 const mainNav = [
   {
@@ -99,11 +102,34 @@ interface SidebarProps {
 
 export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { count } = useHistory();
+  const { user, isGuest, isAuthenticated } = useAuth();
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
+  }
+
+  // Get initials for avatar
+  const initials = user.displayName
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  async function handleSignOut() {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await signOut({ redirect: false });
+      router.push("/login");
+      router.refresh();
+    } catch {
+      setIsSigningOut(false);
+    }
   }
 
   return (
@@ -197,16 +223,46 @@ export function Sidebar({ onClose }: SidebarProps) {
         {/* User card */}
         <div className="flex items-center gap-2.5 px-2 py-2">
           <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-sm font-bold select-none shrink-0">
-            S
+            {initials || "S"}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-white truncate">Student User</p>
-            <p className="text-[10px] text-slate-500 truncate">Student · Active</p>
+            <p className="text-xs font-semibold text-white truncate">{user.displayName}</p>
+            <p className="text-[10px] text-slate-500 truncate">
+              {isGuest ? "Mode Tamu" : `@${user.username}`}
+            </p>
           </div>
+          {/* Sign in / sign out button */}
+          {isGuest ? (
+            <Link
+              href="/login"
+              onClick={onClose}
+              className="shrink-0 px-2 py-1 rounded-lg bg-emerald-600/20 text-emerald-400 text-[10px] font-semibold hover:bg-emerald-600/30 transition-colors"
+            >
+              Masuk
+            </Link>
+          ) : (
+            <button
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              className="shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+              title="Keluar"
+            >
+              {isSigningOut ? (
+                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+                </svg>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Version */}
-        <p className="text-[10px] text-slate-600 px-1">SMANU v1.0.0 (Prototype)</p>
+        <p className="text-[10px] text-slate-600 px-1">SMANU v1.0.0 · {isAuthenticated ? "Akun Terdaftar" : "Mode Tamu"}</p>
       </div>
     </aside>
   );

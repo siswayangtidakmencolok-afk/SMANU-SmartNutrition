@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NutriQuest } from "@/components/NutriQuest";
 
 // ── Data ───────────────────────────────────────────────────────────────────
@@ -65,6 +65,24 @@ export default function MyContextPage() {
   const [goals, setGoals] = useState<string[]>(["energy", "focus"]);
   const [saved, setSaved] = useState(false);
 
+  // Load persisted context on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("smanu_context_v1");
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (Array.isArray(saved.foodChips)) setFoodChips(saved.foodChips);
+      if (typeof saved.budget === "string") setBudget(saved.budget);
+      if (saved.budgetUnit === "meal" || saved.budgetUnit === "day") setBudgetUnit(saved.budgetUnit);
+      if (Array.isArray(saved.preferences)) setPreferences(saved.preferences);
+      if (Array.isArray(saved.situations)) setSituations(saved.situations);
+      if (Array.isArray(saved.goals)) setGoals(saved.goals);
+    } catch {
+      // Corrupted storage — ignore
+    }
+  }, []);
+
   const done = completedSections(foodChips, budget, preferences, situations, goals);
   const pct = Math.round((done / 5) * 100);
 
@@ -79,6 +97,16 @@ export default function MyContextPage() {
   }
 
   function handleSave() {
+    // Persist context to localStorage so it survives page refresh
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("smanu_context_v1", JSON.stringify({
+          foodChips, budget, budgetUnit, preferences, situations, goals,
+        }));
+      } catch {
+        // Storage full or disabled — proceed anyway
+      }
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   }
