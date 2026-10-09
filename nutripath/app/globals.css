@@ -119,6 +119,18 @@
     color: var(--color-on-surface);
   }
 
+  /* Prevent Material Symbols fallback text from overflowing on mobile
+     when the Google Fonts CDN is slow or blocked */
+  .material-symbols-outlined {
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
   /* Hide scrollbar for sidebar */
   .sidebar-scroll::-webkit-scrollbar {
     display: none;

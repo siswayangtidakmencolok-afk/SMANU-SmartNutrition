@@ -249,6 +249,569 @@ export const QUESTION_BANK: QuizQuestion[] = [
       "Vitamin C meningkatkan penyerapan zat besi non-heme (dari tanaman). Konsumsi buah atau sayur kaya Vitamin C bersamaan dengan sumber zat besi nabati sangat dianjurkan.",
   },
 
+  // ── Gizi Dasar (tambahan) ───────────────────────────────────────────────
+  {
+    id: "gizi-006",
+    domain: "Gizi Dasar",
+    question: "Zat gizi yang membantu tubuh mengatur berbagai proses metabolisme adalah?",
+    options: ["Vitamin dan mineral", "Gula saja", "Air saja", "Karbohidrat saja"],
+    correctAnswer: "Vitamin dan mineral",
+    explanation:
+      "Vitamin dan mineral merupakan zat gizi mikro yang membantu berbagai proses tubuh, termasuk metabolisme, fungsi saraf, dan pemeliharaan jaringan.",
+  },
+  {
+    id: "gizi-007",
+    domain: "Gizi Dasar",
+    question: "Apa fungsi utama air bagi tubuh manusia?",
+    options: [
+      "Menggantikan seluruh kebutuhan makanan",
+      "Membantu mengatur suhu tubuh dan mengangkut zat",
+      "Menyediakan semua vitamin",
+      "Menggantikan fungsi protein",
+    ],
+    correctAnswer: "Membantu mengatur suhu tubuh dan mengangkut zat",
+    explanation:
+      "Air membantu mengatur suhu tubuh, mengangkut zat gizi, dan mendukung berbagai proses penting di dalam tubuh.",
+  },
+  {
+    id: "gizi-008",
+    domain: "Gizi Dasar",
+    question: "Manakah contoh sumber energi sekaligus zat gizi yang juga dibutuhkan tubuh untuk membangun jaringan?",
+    options: ["Protein", "Air putih", "Vitamin C saja", "Garam saja"],
+    correctAnswer: "Protein",
+    explanation:
+      "Protein membantu membangun dan memperbaiki jaringan tubuh. Protein juga dapat digunakan sebagai sumber energi ketika diperlukan.",
+  },
+  {
+    id: "gizi-009",
+    domain: "Gizi Dasar",
+    question: "Mengapa tubuh membutuhkan beragam jenis makanan?",
+    options: [
+      "Agar hanya mendapat satu jenis zat gizi",
+      "Agar kebutuhan berbagai zat gizi dapat terpenuhi",
+      "Agar tidak perlu minum air",
+      "Agar semua makanan memiliki kandungan yang sama",
+    ],
+    correctAnswer: "Agar kebutuhan berbagai zat gizi dapat terpenuhi",
+    explanation:
+      "Tidak ada satu jenis makanan biasa yang menyediakan semua zat gizi dalam jumlah ideal. Variasi makanan membantu memenuhi kebutuhan tubuh.",
+  },
+  {
+    id: "gizi-010",
+    domain: "Gizi Dasar",
+    question: "Manakah yang termasuk zat gizi makro?",
+    options: ["Vitamin A", "Zat besi", "Karbohidrat", "Vitamin C"],
+    correctAnswer: "Karbohidrat",
+    explanation:
+      "Karbohidrat, protein, dan lemak termasuk zat gizi makro karena dibutuhkan tubuh dalam jumlah relatif besar dibandingkan vitamin dan mineral.",
+  },
+
+  // ── Protein (tambahan) ──────────────────────────────────────────────────
+  {
+    id: "protein-005",
+    domain: "Protein",
+    question: "Manakah makanan berikut yang merupakan sumber protein nabati?",
+    options: ["Tempe", "Gula pasir", "Minyak goreng", "Sirup"],
+    correctAnswer: "Tempe",
+    explanation:
+      "Tempe dibuat dari kedelai dan merupakan sumber protein nabati yang mudah ditemukan serta dapat diolah menjadi beragam hidangan.",
+  },
+  {
+    id: "protein-006",
+    domain: "Protein",
+    question: "Unit dasar yang menyusun protein disebut?",
+    options: ["Asam amino", "Asam lemak", "Glukosa", "Serat pangan"],
+    correctAnswer: "Asam amino",
+    explanation:
+      "Protein tersusun dari rangkaian asam amino. Tubuh menggunakan asam amino untuk membangun dan memperbaiki jaringan serta membuat berbagai molekul penting.",
+  },
+  {
+    id: "protein-007",
+    domain: "Protein",
+    question: "Manakah kombinasi makanan yang menyediakan protein dari sumber hewani dan nabati?",
+    options: [
+      "Telur dan tempe",
+      "Nasi putih dan gula",
+      "Apel dan jeruk",
+      "Minyak dan mentega",
+    ],
+    correctAnswer: "Telur dan tempe",
+    explanation:
+      "Telur merupakan sumber protein hewani, sedangkan tempe merupakan sumber protein nabati. Keduanya dapat menjadi bagian dari pola makan beragam.",
+  },
+  {
+    id: "protein-008",
+    domain: "Protein",
+    question: "Selain membantu membangun jaringan, protein juga diperlukan untuk membentuk?",
+    options: ["Enzim dan antibodi", "Air minum", "Serat buah", "Karbohidrat dalam nasi"],
+    correctAnswer: "Enzim dan antibodi",
+    explanation:
+      "Protein menjadi bahan pembentuk banyak enzim yang membantu reaksi tubuh dan antibodi yang berperan dalam sistem kekebalan.",
+  },
+  {
+    id: "protein-009",
+    domain: "Protein",
+    question: "Manakah contoh makanan yang dapat membantu memenuhi kebutuhan protein dengan biaya relatif terjangkau?",
+    options: ["Tempe dan telur", "Permen dan sirup", "Kerupuk tanpa bahan lain", "Minuman bersoda"],
+    correctAnswer: "Tempe dan telur",
+    explanation:
+      "Tempe dan telur merupakan pilihan sumber protein yang umum tersedia dan dapat disesuaikan dengan anggaran serta kebutuhan masing-masing orang.",
+  },
+
+  // ── Karbohidrat (tambahan) ──────────────────────────────────────────────
+  {
+    id: "karbo-004",
+    domain: "Karbohidrat",
+    question: "Manakah makanan yang secara alami mengandung karbohidrat?",
+    options: ["Nasi", "Air putih", "Garam", "Minyak kelapa murni"],
+    correctAnswer: "Nasi",
+    explanation:
+      "Nasi merupakan sumber karbohidrat yang banyak dikonsumsi sebagai sumber energi dalam pola makan sehari-hari.",
+  },
+  {
+    id: "karbo-005",
+    domain: "Karbohidrat",
+    question: "Manakah pilihan yang umumnya menyediakan karbohidrat sekaligus serat?",
+    options: ["Oat utuh", "Minyak goreng", "Garam dapur", "Air mineral"],
+    correctAnswer: "Oat utuh",
+    explanation:
+      "Oat utuh mengandung karbohidrat dan serat. Serat membantu mendukung kesehatan pencernaan dan dapat membantu rasa kenyang bertahan lebih lama.",
+  },
+  {
+    id: "karbo-006",
+    domain: "Karbohidrat",
+    question: "Apa yang terjadi pada karbohidrat yang dicerna tubuh?",
+    options: [
+      "Sebagian diuraikan menjadi gula sederhana untuk digunakan sebagai energi",
+      "Semuanya berubah menjadi vitamin",
+      "Semuanya langsung menjadi protein",
+      "Tidak dapat digunakan oleh tubuh",
+    ],
+    correctAnswer: "Sebagian diuraikan menjadi gula sederhana untuk digunakan sebagai energi",
+    explanation:
+      "Pencernaan memecah banyak jenis karbohidrat menjadi gula sederhana, seperti glukosa, yang dapat digunakan sel sebagai sumber energi.",
+  },
+  {
+    id: "karbo-007",
+    domain: "Karbohidrat",
+    question: "Manakah pilihan camilan yang dapat menyediakan karbohidrat dan serat?",
+    options: ["Pisang", "Minyak goreng", "Permen keras saja", "Air putih"],
+    correctAnswer: "Pisang",
+    explanation:
+      "Pisang mengandung karbohidrat dan serat. Buah juga menyediakan berbagai vitamin dan mineral.",
+  },
+  {
+    id: "karbo-008",
+    domain: "Karbohidrat",
+    question: "Apa perbedaan umum antara biji-bijian utuh dan biji-bijian yang telah banyak dimurnikan?",
+    options: [
+      "Biji-bijian utuh umumnya mempertahankan lebih banyak serat",
+      "Biji-bijian utuh tidak mengandung energi",
+      "Biji-bijian yang dimurnikan selalu mengandung lebih banyak vitamin",
+      "Keduanya selalu memiliki kandungan serat yang sama",
+    ],
+    correctAnswer: "Biji-bijian utuh umumnya mempertahankan lebih banyak serat",
+    explanation:
+      "Biji-bijian utuh mempertahankan bagian dedak dan lembaga sehingga umumnya mengandung lebih banyak serat daripada biji-bijian yang sangat dimurnikan.",
+  },
+
+  // ── Vitamin & Mineral (tambahan) ────────────────────────────────────────
+  {
+    id: "vitmin-004",
+    domain: "Vitamin & Mineral",
+    question: "Vitamin yang berperan penting dalam proses penglihatan normal adalah?",
+    options: ["Vitamin A", "Vitamin C", "Vitamin B1", "Vitamin K"],
+    correctAnswer: "Vitamin A",
+    explanation:
+      "Vitamin A dibutuhkan untuk penglihatan normal dan juga mendukung fungsi kekebalan serta pemeliharaan jaringan.",
+  },
+  {
+    id: "vitmin-005",
+    domain: "Vitamin & Mineral",
+    question: "Manakah makanan yang dikenal sebagai sumber vitamin C?",
+    options: ["Jambu biji", "Minyak goreng", "Garam dapur", "Gula pasir"],
+    correctAnswer: "Jambu biji",
+    explanation:
+      "Jambu biji merupakan sumber vitamin C. Vitamin ini membantu pembentukan kolagen dan meningkatkan penyerapan zat besi non-heme.",
+  },
+  {
+    id: "vitmin-006",
+    domain: "Vitamin & Mineral",
+    question: "Mineral yang dibutuhkan untuk membantu pembentukan hemoglobin adalah?",
+    options: ["Zat besi", "Kalsium", "Natrium", "Fluorida"],
+    correctAnswer: "Zat besi",
+    explanation:
+      "Zat besi merupakan bagian penting hemoglobin, protein dalam sel darah merah yang membantu membawa oksigen ke seluruh tubuh.",
+  },
+  {
+    id: "vitmin-007",
+    domain: "Vitamin & Mineral",
+    question: "Vitamin yang membantu proses pembekuan darah normal adalah?",
+    options: ["Vitamin K", "Vitamin C", "Vitamin D", "Vitamin B12"],
+    correctAnswer: "Vitamin K",
+    explanation:
+      "Vitamin K diperlukan tubuh untuk membentuk beberapa protein yang berperan dalam proses pembekuan darah.",
+  },
+  {
+    id: "vitmin-008",
+    domain: "Vitamin & Mineral",
+    question: "Manakah pilihan makanan yang dapat menjadi sumber kalsium?",
+    options: ["Susu dan tahu yang diperkaya kalsium", "Sirup manis", "Minyak goreng", "Permen biasa"],
+    correctAnswer: "Susu dan tahu yang diperkaya kalsium",
+    explanation:
+      "Susu dan tahu yang dibuat menggunakan bahan penggumpal berkalsium atau diperkaya kalsium dapat membantu memenuhi kebutuhan mineral ini.",
+  },
+
+  // ── Hidrasi (tambahan) ──────────────────────────────────────────────────
+  {
+    id: "hidrasi-004",
+    domain: "Hidrasi",
+    question: "Kapan kebutuhan cairan biasanya meningkat?",
+    options: [
+      "Saat berolahraga atau cuaca panas",
+      "Saat duduk diam di ruangan sejuk saja",
+      "Saat tidur tanpa berkeringat dalam kondisi normal",
+      "Kebutuhan cairan tidak pernah berubah",
+    ],
+    correctAnswer: "Saat berolahraga atau cuaca panas",
+    explanation:
+      "Aktivitas fisik dan cuaca panas dapat meningkatkan kehilangan cairan melalui keringat. Kebutuhan minum perlu disesuaikan dengan keadaan.",
+  },
+  {
+    id: "hidrasi-005",
+    domain: "Hidrasi",
+    question: "Apa kebiasaan yang membantu menjaga hidrasi selama belajar di sekolah?",
+    options: [
+      "Membawa botol air dan minum secara berkala",
+      "Menunggu sampai sangat haus setiap hari",
+      "Mengganti semua air dengan minuman bersoda",
+      "Menghindari minum sepanjang jam sekolah",
+    ],
+    correctAnswer: "Membawa botol air dan minum secara berkala",
+    explanation:
+      "Membawa air minum dan minum secara berkala memudahkan pelajar memenuhi kebutuhan cairan sepanjang hari.",
+  },
+  {
+    id: "hidrasi-006",
+    domain: "Hidrasi",
+    question: "Mengapa kehilangan banyak cairan perlu diganti?",
+    options: [
+      "Untuk menjaga keseimbangan cairan tubuh",
+      "Agar tubuh tidak membutuhkan makanan",
+      "Untuk menggantikan semua mineral dengan air saja",
+      "Agar tubuh tidak pernah berkeringat",
+    ],
+    correctAnswer: "Untuk menjaga keseimbangan cairan tubuh",
+    explanation:
+      "Tubuh kehilangan cairan melalui urine, keringat, dan proses lainnya. Cairan yang cukup membantu mempertahankan fungsi tubuh secara normal.",
+  },
+  {
+    id: "hidrasi-007",
+    domain: "Hidrasi",
+    question: "Manakah pilihan yang paling tepat untuk memenuhi kebutuhan minum sehari-hari?",
+    options: [
+      "Air putih sebagai pilihan utama",
+      "Minuman energi setiap kali haus",
+      "Sirup pekat sebagai satu-satunya minuman",
+      "Minuman bersoda sebagai pengganti seluruh air",
+    ],
+    correctAnswer: "Air putih sebagai pilihan utama",
+    explanation:
+      "Air putih merupakan pilihan utama untuk hidrasi sehari-hari. Kebutuhan cairan dapat berbeda menurut aktivitas, cuaca, dan kondisi seseorang.",
+  },
+  {
+    id: "hidrasi-008",
+    domain: "Hidrasi",
+    question: "Apa yang sebaiknya dilakukan ketika beraktivitas fisik dalam cuaca panas?",
+    options: [
+      "Minum secara berkala dan beristirahat bila diperlukan",
+      "Sengaja menghindari semua cairan",
+      "Hanya minum setelah aktivitas selesai berjam-jam",
+      "Menggantikan air dengan makanan asin saja",
+    ],
+    correctAnswer: "Minum secara berkala dan beristirahat bila diperlukan",
+    explanation:
+      "Cuaca panas meningkatkan risiko kehilangan cairan. Minum secara berkala, beristirahat, dan mengurangi aktivitas saat kepanasan membantu menjaga keselamatan.",
+  },
+
+  // ── Makanan Sehat (tambahan) ────────────────────────────────────────────
+  {
+    id: "maksehat-003",
+    domain: "Makanan Sehat",
+    question: "Manakah pilihan yang menambah variasi sayur dalam menu sehari-hari?",
+    options: ["Bayam dan wortel", "Permen dan cokelat saja", "Sirup dan soda", "Kerupuk saja"],
+    correctAnswer: "Bayam dan wortel",
+    explanation:
+      "Sayuran seperti bayam dan wortel menyediakan serat serta beragam vitamin dan mineral. Mengonsumsi berbagai jenis sayuran membantu variasi asupan zat gizi.",
+  },
+  {
+    id: "maksehat-004",
+    domain: "Makanan Sehat",
+    question: "Mengapa buah utuh sering menjadi pilihan yang baik dibandingkan minuman buah bergula?",
+    options: [
+      "Buah utuh umumnya menyediakan serat dan perlu dikunyah",
+      "Semua buah utuh tidak mengandung gula alami",
+      "Minuman buah selalu mengandung lebih banyak serat",
+      "Buah utuh tidak mengandung air",
+    ],
+    correctAnswer: "Buah utuh umumnya menyediakan serat dan perlu dikunyah",
+    explanation:
+      "Buah utuh menyediakan serat dan berbagai zat gizi. Minuman buah bergula dapat mengandung tambahan gula dan biasanya tidak memberikan serat sebanyak buah utuh.",
+  },
+  {
+    id: "maksehat-005",
+    domain: "Makanan Sehat",
+    question: "Apa yang dimaksud dengan pola makan beragam?",
+    options: [
+      "Mengonsumsi berbagai jenis makanan dari kelompok yang berbeda",
+      "Makan satu jenis makanan setiap hari",
+      "Hanya memilih makanan berdasarkan warna",
+      "Menghindari seluruh sumber karbohidrat",
+    ],
+    correctAnswer: "Mengonsumsi berbagai jenis makanan dari kelompok yang berbeda",
+    explanation:
+      "Pola makan beragam membantu menyediakan kombinasi zat gizi yang lebih luas dari berbagai kelompok makanan.",
+  },
+  {
+    id: "maksehat-006",
+    domain: "Makanan Sehat",
+    question: "Manakah contoh sumber lemak tak jenuh?",
+    options: ["Kacang-kacangan", "Gula pasir", "Garam", "Air putih"],
+    correctAnswer: "Kacang-kacangan",
+    explanation:
+      "Kacang-kacangan mengandung lemak tak jenuh, protein, dan zat gizi lainnya. Porsi konsumsinya dapat disesuaikan dengan kebutuhan dan kondisi masing-masing.",
+  },
+  {
+    id: "maksehat-007",
+    domain: "Makanan Sehat",
+    question: "Bagaimana cara sederhana membuat makanan rumahan lebih beragam zat gizinya?",
+    options: [
+      "Menggabungkan sumber karbohidrat, protein, serta sayur atau buah",
+      "Hanya mengonsumsi satu bahan makanan",
+      "Menghilangkan semua sayur dari menu",
+      "Mengganti semua makanan dengan minuman manis",
+    ],
+    correctAnswer: "Menggabungkan sumber karbohidrat, protein, serta sayur atau buah",
+    explanation:
+      "Menggabungkan kelompok makanan yang berbeda membantu menyediakan energi, protein, serat, vitamin, dan mineral dalam menu sehari-hari.",
+  },
+
+  // ── Pola Makan (tambahan) ───────────────────────────────────────────────
+  {
+    id: "polamakan-003",
+    domain: "Pola Makan",
+    question: "Apa manfaat merencanakan waktu makan ketika menjalani hari sekolah yang padat?",
+    options: [
+      "Membantu mengatur waktu untuk memenuhi kebutuhan makan",
+      "Membuat tubuh tidak membutuhkan air",
+      "Menjamin tidak akan pernah merasa lapar",
+      "Menghilangkan kebutuhan variasi makanan",
+    ],
+    correctAnswer: "Membantu mengatur waktu untuk memenuhi kebutuhan makan",
+    explanation:
+      "Perencanaan waktu makan dapat membantu pelajar menyiapkan makanan dan mengurangi kemungkinan melewatkan waktu makan karena jadwal yang padat.",
+  },
+  {
+    id: "polamakan-004",
+    domain: "Pola Makan",
+    question: "Apa yang dapat dilakukan jika tidak sempat makan besar sebelum berangkat sekolah?",
+    options: [
+      "Menyiapkan makanan praktis yang sesuai dan memakannya saat memungkinkan",
+      "Sengaja tidak makan sepanjang hari",
+      "Hanya minum minuman energi",
+      "Menghindari semua makanan sampai malam",
+    ],
+    correctAnswer: "Menyiapkan makanan praktis yang sesuai dan memakannya saat memungkinkan",
+    explanation:
+      "Menyiapkan pilihan praktis seperti roti isi telur atau buah bersama sumber protein dapat membantu ketika waktu terbatas. Sesuaikan pilihan dengan ketersediaan makanan.",
+  },
+  {
+    id: "polamakan-005",
+    domain: "Pola Makan",
+    question: "Apa yang sebaiknya diperhatikan ketika memilih camilan untuk menemani belajar?",
+    options: [
+      "Variasi zat gizi, rasa lapar, dan ketersediaan makanan",
+      "Hanya warna kemasan",
+      "Harga paling mahal selalu paling sehat",
+      "Semua camilan harus dihindari",
+    ],
+    correctAnswer: "Variasi zat gizi, rasa lapar, dan ketersediaan makanan",
+    explanation:
+      "Camilan dapat menjadi bagian dari pola makan. Pilih sesuai kebutuhan dan situasi, misalnya buah, kacang, atau makanan lain yang tersedia dan cocok.",
+  },
+  {
+    id: "polamakan-006",
+    domain: "Pola Makan",
+    question: "Mengapa jadwal makan dapat berbeda antara satu orang dan orang lainnya?",
+    options: [
+      "Rutinitas, kebutuhan, aktivitas, dan kondisi individu berbeda",
+      "Semua orang memiliki kebutuhan yang persis sama setiap saat",
+      "Jadwal makan hanya ditentukan oleh warna makanan",
+      "Tubuh tidak membutuhkan energi pada hari sekolah",
+    ],
+    correctAnswer: "Rutinitas, kebutuhan, aktivitas, dan kondisi individu berbeda",
+    explanation:
+      "Jadwal dan kebutuhan makan dapat dipengaruhi aktivitas, rutinitas, usia, kondisi kesehatan, serta kebutuhan individu. Tidak ada satu jadwal yang harus sama untuk semua orang.",
+  },
+  {
+    id: "polamakan-007",
+    domain: "Pola Makan",
+    question: "Apa pendekatan yang baik ketika merasa lapar di sela-sela waktu makan?",
+    options: [
+      "Mempertimbangkan camilan yang sesuai dengan kebutuhan dan situasi",
+      "Selalu mengabaikan rasa lapar",
+      "Hanya memilih minuman bersoda",
+      "Menganggap semua camilan pasti buruk",
+    ],
+    correctAnswer: "Mempertimbangkan camilan yang sesuai dengan kebutuhan dan situasi",
+    explanation:
+      "Camilan dapat membantu memenuhi kebutuhan energi di antara waktu makan. Pilihan dan porsinya dapat disesuaikan dengan rasa lapar, aktivitas, serta makanan yang tersedia.",
+  },
+
+  // ── Keamanan Makanan (tambahan) ─────────────────────────────────────────
+  {
+    id: "keamanan-003",
+    domain: "Keamanan Makanan",
+    question: "Apa yang sebaiknya dilakukan sebelum menyiapkan makanan?",
+    options: [
+      "Mencuci tangan menggunakan sabun dan air mengalir",
+      "Menyentuh makanan dengan tangan kotor",
+      "Menggunakan alat masak yang belum dibersihkan",
+      "Membiarkan sampah menempel pada meja",
+    ],
+    correctAnswer: "Mencuci tangan menggunakan sabun dan air mengalir",
+    explanation:
+      "Mencuci tangan dengan sabun dan air mengalir membantu mengurangi perpindahan kuman ke makanan dan peralatan dapur.",
+  },
+  {
+    id: "keamanan-004",
+    domain: "Keamanan Makanan",
+    question: "Mengapa makanan mentah perlu dipisahkan dari makanan matang?",
+    options: [
+      "Untuk mengurangi risiko kontaminasi silang",
+      "Agar makanan matang menjadi mentah kembali",
+      "Agar semua makanan kehilangan rasa",
+      "Supaya makanan tidak perlu disimpan dengan benar",
+    ],
+    correctAnswer: "Untuk mengurangi risiko kontaminasi silang",
+    explanation:
+      "Makanan mentah dapat membawa kuman yang berpindah ke makanan matang melalui tangan, talenan, pisau, atau permukaan yang sama.",
+  },
+  {
+    id: "keamanan-005",
+    domain: "Keamanan Makanan",
+    question: "Apa cara yang tepat untuk menyimpan makanan matang yang akan dimakan nanti?",
+    options: [
+      "Segera simpan dalam lemari pendingin setelah tidak lagi diperlukan untuk penyajian",
+      "Biarkan terbuka di meja sepanjang malam",
+      "Letakkan di dekat tempat sampah",
+      "Simpan di bawah sinar matahari",
+    ],
+    correctAnswer: "Segera simpan dalam lemari pendingin setelah tidak lagi diperlukan untuk penyajian",
+    explanation:
+      "Makanan mudah rusak sebaiknya segera didinginkan dan disimpan dalam lemari pendingin, bukan dibiarkan lama pada suhu ruang.",
+  },
+  {
+    id: "keamanan-006",
+    domain: "Keamanan Makanan",
+    question: "Apa yang sebaiknya dilakukan jika kemasan makanan menunjukkan tanggal kedaluwarsa yang sudah lewat?",
+    options: [
+      "Ikuti petunjuk label dan jangan mengonsumsi produk yang sudah kedaluwarsa",
+      "Selalu konsumsi karena bau normal menjamin keamanan",
+      "Panaskan sebentar agar semua risiko hilang",
+      "Campurkan dengan makanan lain agar aman",
+    ],
+    correctAnswer: "Ikuti petunjuk label dan jangan mengonsumsi produk yang sudah kedaluwarsa",
+    explanation:
+      "Tanggal pada label dan petunjuk penyimpanan perlu diperhatikan. Bau atau tampilan normal saja tidak selalu menjamin makanan aman dikonsumsi.",
+  },
+  {
+    id: "keamanan-007",
+    domain: "Keamanan Makanan",
+    question: "Apa tindakan yang tepat sebelum membeli makanan kemasan?",
+    options: [
+      "Memeriksa kondisi kemasan, label, dan tanggal kedaluwarsa",
+      "Memilih hanya berdasarkan warna kemasan",
+      "Mengabaikan kemasan yang bocor",
+      "Membeli produk tanpa memperhatikan cara penyimpanan",
+    ],
+    correctAnswer: "Memeriksa kondisi kemasan, label, dan tanggal kedaluwarsa",
+    explanation:
+      "Memeriksa kondisi kemasan, label, tanggal kedaluwarsa, dan petunjuk penyimpanan membantu konsumen membuat pilihan yang lebih aman.",
+  },
+
+  // ── Mitos & Fakta Nutrisi (tambahan) ────────────────────────────────────
+  {
+    id: "mitos-004",
+    domain: "Mitos & Fakta Nutrisi",
+    question: "MITOS atau FAKTA: 'Semua makanan yang berlabel alami pasti lebih bergizi.'",
+    options: [
+      "Fakta — label alami selalu menjamin kandungan gizi terbaik",
+      "Mitos — kandungan gizi perlu dinilai dari bahan dan informasi produknya",
+      "Fakta — semua produk alami bebas gula",
+      "Mitos — makanan alami tidak mengandung zat gizi",
+    ],
+    correctAnswer: "Mitos — kandungan gizi perlu dinilai dari bahan dan informasi produknya",
+    explanation:
+      "Istilah 'alami' saja tidak menjamin bahwa suatu produk lebih bergizi. Perhatikan komposisi, informasi gizi, dan konteks pola makan secara keseluruhan.",
+  },
+  {
+    id: "mitos-005",
+    domain: "Mitos & Fakta Nutrisi",
+    question: "MITOS atau FAKTA: 'Sarapan harus selalu berupa nasi agar bergizi.'",
+    options: [
+      "Fakta — hanya nasi yang cocok untuk sarapan",
+      "Mitos — sarapan dapat menggunakan beragam makanan yang memenuhi kebutuhan gizi",
+      "Fakta — semua makanan selain nasi tidak mengandung energi",
+      "Mitos — sarapan tidak boleh mengandung karbohidrat",
+    ],
+    correctAnswer: "Mitos — sarapan dapat menggunakan beragam makanan yang memenuhi kebutuhan gizi",
+    explanation:
+      "Sarapan tidak harus selalu berupa nasi. Roti, oat, umbi, atau makanan lain dapat menjadi pilihan sesuai ketersediaan dan kebutuhan, dengan memperhatikan keseimbangan menu.",
+  },
+  {
+    id: "mitos-006",
+    domain: "Mitos & Fakta Nutrisi",
+    question: "MITOS atau FAKTA: 'Minuman yang terasa manis pasti tidak mengandung air.'",
+    options: [
+      "Fakta — rasa manis berarti tidak ada air",
+      "Mitos — minuman manis mengandung air, tetapi dapat memiliki tambahan gula",
+      "Fakta — semua minuman manis adalah makanan padat",
+      "Mitos — minuman manis tidak pernah mengandung gula",
+    ],
+    correctAnswer: "Mitos — minuman manis mengandung air, tetapi dapat memiliki tambahan gula",
+    explanation:
+      "Minuman manis tetap mengandung air, tetapi tambahan gula dapat meningkatkan asupan gula. Air putih tetap menjadi pilihan utama untuk hidrasi sehari-hari.",
+  },
+  {
+    id: "mitos-007",
+    domain: "Mitos & Fakta Nutrisi",
+    question: "MITOS atau FAKTA: 'Makanan sehat selalu harus mahal.'",
+    options: [
+      "Fakta — makanan bergizi hanya tersedia dengan harga mahal",
+      "Mitos — pilihan terjangkau seperti telur, tempe, dan sayuran dapat menjadi bagian menu bergizi",
+      "Fakta — makanan lokal tidak mengandung zat gizi",
+      "Mitos — harga adalah satu-satunya penentu kandungan gizi",
+    ],
+    correctAnswer: "Mitos — pilihan terjangkau seperti telur, tempe, dan sayuran dapat menjadi bagian menu bergizi",
+    explanation:
+      "Makanan bergizi dapat disesuaikan dengan anggaran. Bahan lokal seperti tempe, telur, kacang-kacangan, dan sayuran musiman dapat membantu membangun menu beragam.",
+  },
+  {
+    id: "mitos-008",
+    domain: "Mitos & Fakta Nutrisi",
+    question: "MITOS atau FAKTA: 'Jika suatu produk mengandung vitamin, produk itu pasti sehat untuk dikonsumsi tanpa batas.'",
+    options: [
+      "Fakta — vitamin membuat semua produk aman tanpa batas",
+      "Mitos — keseluruhan komposisi, jumlah konsumsi, dan kebutuhan tetap perlu diperhatikan",
+      "Fakta — vitamin menghilangkan seluruh tambahan gula",
+      "Mitos — tubuh tidak membutuhkan vitamin",
+    ],
+    correctAnswer: "Mitos — keseluruhan komposisi, jumlah konsumsi, dan kebutuhan tetap perlu diperhatikan",
+    explanation:
+      "Kandungan satu vitamin tidak otomatis menjadikan suatu produk pilihan terbaik untuk dikonsumsi tanpa batas. Perhatikan komposisi, porsi, dan pola makan secara keseluruhan.",
+  },
+
   // ── Hidrasi ──────────────────────────────────────────────────────────────
   {
     id: "hidrasi-001",

@@ -94,7 +94,7 @@ export default function MyContextPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full bg-[#131b2e] text-white px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 overflow-x-hidden">
+    <div className="w-full bg-[#131b2e] text-white px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 overflow-x-hidden" style={{maxWidth: "100vw"}}>
 
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -122,12 +122,12 @@ export default function MyContextPage() {
       </div>
 
       {/* ── Hero intro panel ─────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-white/5 p-6 lg:p-10">
+      <div className="relative overflow-hidden rounded-2xl bg-white/5 p-5 sm:p-6 lg:p-10">
         <div className="absolute -right-20 -top-20 w-96 h-96 rounded-full bg-[#006c49]/10 blur-3xl pointer-events-none" />
         <div className="absolute right-40 -bottom-20 w-80 h-80 rounded-full bg-[#4cd7f6]/10 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-7 flex flex-col gap-4">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
+          <div className="lg:col-span-7 flex flex-col gap-4 min-w-0">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#006c49]/20 text-[#6cf8bb] text-xs font-semibold w-fit uppercase tracking-wider">
               <span className="material-symbols-outlined text-[14px]">bolt</span>
               Personalization Engine
@@ -153,9 +153,9 @@ export default function MyContextPage() {
             </div>
           </div>
 
-          {/* Animated graphic */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end overflow-hidden">
-            <div className="relative w-56 h-56 sm:w-64 sm:h-64 flex items-center justify-center flex-shrink-0">
+          {/* Animated graphic — hidden on small mobile, shown from sm breakpoint */}
+          <div className="hidden sm:flex lg:col-span-5 justify-center lg:justify-end overflow-hidden">
+            <div className="relative w-56 h-56 sm:w-64 sm:h-64 flex items-center justify-center flex-shrink-0 overflow-hidden">
               <svg className="absolute inset-0 w-full h-full animate-spin [animation-duration:40s]" fill="none" viewBox="0 0 200 200">
                 <circle className="text-white/10" cx="100" cy="100" r="90" stroke="currentColor" strokeDasharray="4 6" strokeWidth="1" />
                 <circle className="text-[#006c49]/40" cx="100" cy="100" r="68" stroke="currentColor" strokeDasharray="12 12" strokeWidth="1.5" />
@@ -183,10 +183,10 @@ export default function MyContextPage() {
       </div>
 
       {/* ── Two-column workspace ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start min-w-0">
 
         {/* LEFT COLUMN — input cards */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
+        <div className="lg:col-span-7 flex flex-col gap-6 min-w-0">
 
           {/* CARD 01: Food Available */}
           <ContextCard num="01" title="Food Available" icon="kitchen"
@@ -309,11 +309,11 @@ export default function MyContextPage() {
         </div>
 
         {/* RIGHT COLUMN — summary + goals + actions */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
+        <div className="lg:col-span-5 flex flex-col gap-6 min-w-0 overflow-hidden">
 
           {/* CARD 05: Your Nutrition Profile */}
-          <div className="rounded-xl bg-white/5 p-5 flex flex-col gap-5">
-            <div className="flex items-center justify-between">
+          <div className="rounded-xl bg-white/5 p-5 flex flex-col gap-5 overflow-hidden">
+            <div className="flex items-center justify-between min-w-0">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white">
                   <span className="material-symbols-outlined text-[18px]">badge</span>
@@ -341,20 +341,20 @@ export default function MyContextPage() {
                   highlight: true,
                 },
               ].map((item) => (
-                <div key={item.label} className="flex flex-col gap-1 p-3 rounded-lg bg-white/5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-[#7c839b] uppercase tracking-wider">{item.label}</span>
-                    <span className="material-symbols-outlined text-[#7c839b] text-[16px]">{item.icon}</span>
+                <div key={item.label} className="flex flex-col gap-1 p-3 rounded-lg bg-white/5 overflow-hidden">
+                  <div className="flex items-center justify-between gap-2 min-w-0">
+                    <span className="text-[10px] font-semibold text-[#7c839b] uppercase tracking-wider truncate">{item.label}</span>
+                    <span className="material-symbols-outlined text-[#7c839b] shrink-0" style={{fontSize: "16px", width: "16px", height: "16px", overflow: "hidden"}}>{item.icon}</span>
                   </div>
-                  <span className={`text-sm font-medium ${item.highlight ? "text-[#6cf8bb]" : "text-white"}`}>
+                  <span className={`text-sm font-medium break-words ${item.highlight ? "text-[#6cf8bb]" : "text-white"}`}>
                     {item.val}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-              <span className="material-symbols-outlined text-[#6cf8bb] text-[18px] mt-0.5 flex-shrink-0">verified_user</span>
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-white/5 overflow-hidden">
+              <span className="material-symbols-outlined text-[#6cf8bb] mt-0.5 flex-shrink-0" style={{fontSize: "18px", width: "18px", height: "18px", overflow: "hidden"}}>verified_user</span>
               <p className="text-xs text-[#7c839b] leading-normal">
                 SMANU uses this context strictly to tailor meal advice, ingredient substitutions, and academic energy curves. No personal health records are shared.
               </p>
@@ -424,13 +424,13 @@ export default function MyContextPage() {
       </div>
 
       {/* ── NutriQuest Section ────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl bg-white/5 p-6 lg:p-10">
+      <div className="relative overflow-hidden rounded-2xl bg-white/5 p-5 sm:p-6 lg:p-10">
         <div className="absolute -left-20 -bottom-20 w-80 h-80 rounded-full bg-[#4cd7f6]/10 blur-3xl pointer-events-none" />
         <div className="absolute right-10 top-0 w-80 h-80 rounded-full bg-[#006c49]/15 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-center">
           {/* Left: text + widget */}
-          <div className="lg:col-span-7 flex flex-col gap-5">
+          <div className="lg:col-span-7 flex flex-col gap-5 min-w-0">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#4cd7f6]/15 text-[#4cd7f6] text-xs font-semibold w-fit uppercase tracking-wider">
               <span className="material-symbols-outlined text-[14px]">psychology_alt</span>
               Nutrition Quiz
@@ -446,9 +446,9 @@ export default function MyContextPage() {
             <NutriQuest userName="SMANU Student" />
           </div>
 
-          {/* Right: graphic */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end overflow-hidden">
-            <div className="relative w-56 h-52 sm:w-72 sm:h-64 flex items-center justify-center flex-shrink-0">
+          {/* Right: graphic — hidden on small mobile */}
+          <div className="hidden sm:flex lg:col-span-5 justify-center lg:justify-end overflow-hidden">
+            <div className="relative w-56 h-52 sm:w-72 sm:h-64 flex items-center justify-center flex-shrink-0 overflow-hidden">
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-56 h-56 rounded-full bg-white/5 animate-pulse [animation-duration:6s]" />
               </div>
@@ -496,7 +496,7 @@ function ContextCard({
           </div>
           <p className="text-xs text-[#7c839b]">{desc}</p>
         </div>
-        <span className="material-symbols-outlined text-[#7c839b] text-[20px]">{icon}</span>
+        <span className="material-symbols-outlined text-[#7c839b] shrink-0 overflow-hidden" style={{fontSize: "20px", width: "20px", height: "20px"}}>{icon}</span>
       </div>
       {children}
     </div>
