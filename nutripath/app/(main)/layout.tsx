@@ -10,10 +10,14 @@ import { AiChatWidget } from "@/components/AiChatWidget";
 // Pages that need full-height viewport (no padding) — chat interface
 const FULLSCREEN_PAGES = ["/ask-smanu"];
 
+// Pages that get full-width (no max-width container) — dark full-bleed pages
+const FULLBLEED_PAGES = ["/my-context"];
+
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
   const isFullscreen = FULLSCREEN_PAGES.some((p) => pathname.startsWith(p));
+  const isFullbleed = FULLBLEED_PAGES.some((p) => pathname.startsWith(p));
 
   return (
     <HistoryProvider>
@@ -43,7 +47,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
             {isFullscreen ? (
               <div className="flex-1 overflow-hidden">{children}</div>
+            ) : isFullbleed ? (
+              // Full-bleed: no padding, no max-width — page manages its own spacing
+              <main className="flex-1 overflow-y-auto overflow-x-hidden">
+                <div className="w-full">{children}</div>
+              </main>
             ) : (
+              // Normal pages: standard padding + max-width
               <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
                 <div className="max-w-7xl mx-auto">{children}</div>
               </main>
