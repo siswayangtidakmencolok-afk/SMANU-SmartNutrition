@@ -94,7 +94,7 @@ export default function MyContextPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full bg-[#131b2e] text-white px-6 py-8 flex flex-col gap-8 min-h-screen">
+    <div className="w-full bg-[#131b2e] text-white px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-6 overflow-x-hidden">
 
       {/* ── Page Header ─────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -154,8 +154,8 @@ export default function MyContextPage() {
           </div>
 
           {/* Animated graphic */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="relative w-64 h-64 flex items-center justify-center">
+          <div className="lg:col-span-5 flex justify-center lg:justify-end overflow-hidden">
+            <div className="relative w-56 h-56 sm:w-64 sm:h-64 flex items-center justify-center flex-shrink-0">
               <svg className="absolute inset-0 w-full h-full animate-spin [animation-duration:40s]" fill="none" viewBox="0 0 200 200">
                 <circle className="text-white/10" cx="100" cy="100" r="90" stroke="currentColor" strokeDasharray="4 6" strokeWidth="1" />
                 <circle className="text-[#006c49]/40" cx="100" cy="100" r="68" stroke="currentColor" strokeDasharray="12 12" strokeWidth="1.5" />
@@ -166,13 +166,15 @@ export default function MyContextPage() {
                 <span className="text-xs font-semibold text-white mt-1">SMANU Core</span>
                 <span className="text-[10px] text-[#7c839b]">Live Sync</span>
               </div>
-              <div className="absolute top-2 left-4 px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md text-[11px] text-white shadow-md flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#006c49]" /> Budget Aware
+              <div className="absolute top-2 left-4 px-2 py-1 rounded-lg bg-white/10 backdrop-blur-md text-[10px] text-white shadow-md flex items-center gap-1 max-w-[110px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#006c49] flex-shrink-0" />
+                <span className="truncate">Budget Aware</span>
               </div>
-              <div className="absolute bottom-4 right-2 px-2.5 py-1 rounded-lg bg-white/10 backdrop-blur-md text-[11px] text-white shadow-md flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#4cd7f6]" /> Pantry Matrix
+              <div className="absolute bottom-4 right-2 px-2 py-1 rounded-lg bg-white/10 backdrop-blur-md text-[10px] text-white shadow-md flex items-center gap-1 max-w-[110px]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#4cd7f6] flex-shrink-0" />
+                <span className="truncate">Pantry Matrix</span>
               </div>
-              <div className="absolute -left-2 bottom-12 px-2 py-0.5 rounded-md bg-[#006c49]/30 text-[10px] text-[#6cf8bb]">
+              <div className="absolute -left-2 bottom-12 px-2 py-0.5 rounded-md bg-[#006c49]/30 text-[10px] text-[#6cf8bb] max-w-[70px] truncate">
                 Verified
               </div>
             </div>
@@ -445,8 +447,8 @@ export default function MyContextPage() {
           </div>
 
           {/* Right: graphic */}
-          <div className="lg:col-span-5 flex justify-center lg:justify-end">
-            <div className="relative w-72 h-64 flex items-center justify-center">
+          <div className="lg:col-span-5 flex justify-center lg:justify-end overflow-hidden">
+            <div className="relative w-56 h-52 sm:w-72 sm:h-64 flex items-center justify-center flex-shrink-0">
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-56 h-56 rounded-full bg-white/5 animate-pulse [animation-duration:6s]" />
               </div>
@@ -457,13 +459,13 @@ export default function MyContextPage() {
                 <span className="text-xl font-semibold text-white">15 Soal</span>
                 <span className="text-xs text-[#4cd7f6]">Terverifikasi SMANU</span>
               </div>
-              <div className="absolute top-2 right-4 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md shadow-lg flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#6cf8bb] text-[16px]">task_alt</span>
-                <span className="text-xs text-white font-medium">Nutrition Challenge</span>
+              <div className="absolute top-2 right-2 sm:right-4 px-2 py-1 rounded-xl bg-white/10 backdrop-blur-md shadow-lg flex items-center gap-1.5 max-w-[130px]">
+                <span className="material-symbols-outlined text-[#6cf8bb] text-[14px] flex-shrink-0">task_alt</span>
+                <span className="text-[10px] text-white font-medium truncate">Nutrition Challenge</span>
               </div>
-              <div className="absolute bottom-4 left-2 px-3 py-1.5 rounded-xl bg-white/10 backdrop-blur-md shadow-lg flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#4cd7f6] text-[16px]">star</span>
-                <span className="text-xs text-white font-medium">Peer Reviewed</span>
+              <div className="absolute bottom-4 left-2 px-2 py-1 rounded-xl bg-white/10 backdrop-blur-md shadow-lg flex items-center gap-1.5 max-w-[120px]">
+                <span className="material-symbols-outlined text-[#4cd7f6] text-[14px] flex-shrink-0">star</span>
+                <span className="text-[10px] text-white font-medium truncate">Peer Reviewed</span>
               </div>
             </div>
           </div>
