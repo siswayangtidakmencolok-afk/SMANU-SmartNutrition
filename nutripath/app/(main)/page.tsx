@@ -1,467 +1,370 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
+import { QUEST_QUESTION_COUNT } from "@/lib/nutriquest-bank";
+import { LiveContextWidget } from "@/components/dashboard/LiveContextWidget";
+import { RecentSessionsWidget } from "@/components/dashboard/RecentSessionsWidget";
+import { NutriQuestProgressWidget } from "@/components/dashboard/NutriQuestProgressWidget";
 
-const knowledgeTopics = [
-  {
-    id: "nutrition-basics",
-    label: "Fundamentals",
-    title: "Nutrition Basics",
-    desc: "Macronutrients, micronutrients, and daily energy balance.",
-    imgUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuC4_xhMZUHUsrtu4J49rfK1lD8Diw53z6_mhgPCwAapfsD3ZhlTS1RMd1XcjwVtFCGSOhnPmUuqRKxuubtmgjLGTB23-5xEzq3VIod1XoMfGgWtGJw4pDT3RBzM12U9pwgfJ9Od1IH8MfPYr0PGcMleo-NfDWFmyRJ4ywvReJ7ShPqmkLN-uMNs-YjZYfuwP8MqLl43BvhURGq03ll7vpcC3B4QopR18RKrUJzzJQlFDqjb-7j8mpq2bg",
-  },
-  {
-    id: "hydration",
-    label: "Wellness",
-    title: "Hydration",
-    desc: "Daily fluids, electrolytes, and focus benefits.",
-    imgUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuDokmBnYHi2Ic_u0ydRXzupJ05RGD8K803wEpfrftCAq55TemP-8aOlYem89VMfp0meWUt6LvLyDiCqUOvbuBkdg_oo1f_WHcSmWeJR96zS2tnAQbTeGQZXKlgqVBcR6C2KTg5NIyzRKlemEA2rcKqeuLVgkUvtSNbIcWp4BgH_4inZLsWTvou2GJ1deiD0R9Ua3kojuk0BmaYM1ZD_Ge6HK9KehQSbi_iwGN_oT_AB-_Tm4UdgNLG4XQ",
-  },
-  {
-    id: "food-choices",
-    label: "Lifestyle",
-    title: "Food Choices",
-    desc: "Building plates with accessible campus cafeteria staples.",
-    imgUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuA1Q-3EdSXm0YUU3KJkqJxZeCBYFLp9eB1qnJqCfdxkh2iGmMoPKiYlAJhm9pn3KSCTmz2DaGPcuPbkzHuiuF9U3qc8PqLfAJtpAxyXY7lecDnvoMhwT5yMaUAYO8YxtOs6ok6g7vZeSES0WXR-t_2T4dSndacJ96SjrGUb7wbNzRcoYheVGKJDKmUnkkRX6ao0SjLn7JP_dmH5we8AmY4e0R31Cl7Sm1H07IjN_wsTj2cB65zcyjuuMA",
-  },
-  {
-    id: "food-labels",
-    label: "Practical Skills",
-    title: "Food Labels",
-    desc: "Serving sizes, daily values %, and hidden sugars.",
-    imgUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCa75cS2cUFHSvjEpeUbYIrdzjXFnJ9Rj30VFm_N6pvFUrdtbd625gNfN9-ExuO5DblAE-dTZ6ZPHugg0YMKYbLaqi_ttkTmhg5Hx4HZc1KmXmE7-c1YEOBaAO49Zy_K7zPAnP_L5rwhbkx4vsfvssRSS-TusOOFSp4wujUyVlOcbvDDpNM4S-rGq-DZzhmba4dajYusXG-Z3rIa3gueKXx8qYFXzoV4vbU4VTsYHm66zm7W-X10LGGNQ",
-  },
-  {
-    id: "student-meals",
-    label: "Quick Recipes",
-    title: "Student Meals",
-    desc: "Nutritious combinations using dormitory supplies.",
-    imgUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCjtvvpr25li5JQiJxBFy0Q3GEF-xWEKaIYDI4IYkPLsD83d3_-Cn7irz3rFHnDynC37GKEEWx3_8Z7IvZLlNonPHewZ4pGzeeOFmwN2gr-P8gzdi8siD0ADsS_eNdWJzwnlytSw2_VBQMGOYxy0W6VJO3zKp6bB0ujbZY7_Spd1qwGyPuUms6FRcebMpTxSKWCuB9gzu1Fbk_0iAzpXYOov_skDjSpgRIE7l0vwZU62FtcRvGUfJqBfQ",
-  },
-];
+// ── Static data ────────────────────────────────────────────────────────────
 
-const quickActions = [
+const featureCards = [
   {
     href: "/ask-smanu",
-    icon: "help_outline",
-    title: "Ask a Question",
-    desc: "Get an explanation based on the available nutrition knowledge.",
-    cta: "Start prompt",
-    status: "Available",
-    available: true,
-  },
-  {
-    href: null,
-    icon: "balance",
-    title: "Compare Food",
-    desc: "Compare food options using information available in the knowledge base.",
-    cta: "Vector schema indexing",
-    status: "Planned",
-    available: false,
+    icon: "smart_toy",
+    iconBg: "bg-[#6cf8bb] text-[#002113]",
+    badge: "Interactive RAG",
+    title: "Ask SMANU AI",
+    desc: "Konsultasi gizi berbasis konteks kamu — budget kantin, bahan tersedia, dan jadwal sekolah.",
+    cta: "Mulai Chat AI",
+    ctaColor: "text-emerald-600",
   },
   {
     href: "/nutrition-knowledge",
-    icon: "school",
-    title: "Learn Nutrition",
-    desc: "Explore basic nutrition topics and scientific concepts.",
-    cta: "Explore curriculum",
-    status: "Available",
-    available: true,
+    icon: "menu_book",
+    iconBg: "bg-[#dce9ff] text-[#0b1c30]",
+    badge: "Kurikulum Gizi",
+    title: "Nutrition Knowledge",
+    desc: "Modul sains terverifikasi: makronutrien, mikronutrien, hidrasi, dan kebiasaan makan sehat.",
+    cta: "Buka Katalog Sains",
+    ctaColor: "text-slate-700",
+  },
+  {
+    href: "/my-context",
+    icon: "emoji_events",
+    iconBg: "bg-[#acedff] text-[#004e5c]",
+    badge: "Sertifikasi Siswa",
+    title: "NutriQuest Challenge",
+    desc: `Kuis ${QUEST_QUESTION_COUNT} soal literasi gizi dengan sertifikat digital untuk portofolio.`,
+    cta: `Uji Kemampuan (${QUEST_QUESTION_COUNT} Soal)`,
+    ctaColor: "text-emerald-600",
   },
   {
     href: "/nutrition-knowledge",
-    icon: "qr_code_scanner",
-    title: "Understand Labels",
-    desc: "Learn how to read common nutrition label information.",
-    cta: "Read guide",
-    status: "Available",
-    available: true,
+    icon: "fact_check",
+    iconBg: "bg-slate-100 text-slate-700",
+    badge: "Panduan Praktis",
+    title: "Pahami Label Makanan",
+    desc: "Panduan membaca batas GGL (Gula, Garam, Lemak) pada jajanan kemasan dan kantin.",
+    cta: "Pelajari Skrining Label",
+    ctaColor: "text-slate-700",
   },
 ];
+
+const suggestedPrompts = [
+  { emoji: "⚡", text: "Menu warteg budget 15k tinggi protein" },
+  { emoji: "🥱", text: "Cegah ngantuk saat pelajaran ke-5" },
+  { emoji: "🥚", text: "Sumber protein murah selain ayam fillet" },
+  { emoji: "💧", text: "Target hidrasi 2 liter saat jam ekskul" },
+];
+
+// ── Page ───────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   return (
-    <div className="flex flex-col gap-8">
-      {/* ── Page header ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-[--color-secondary] font-semibold uppercase tracking-wider">
-              SMANU Student Hub
+    <div className="flex flex-col gap-6 pb-10">
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          TOP HEADER ROW
+      ══════════════════════════════════════════════════════════════════════ */}
+      <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#6cf8bb] text-[#002113] text-xs font-bold tracking-wide">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#006c49]" />
+              SMANU PORTAL AKTIF
             </span>
-            <span className="w-1 h-1 rounded-full bg-[--color-outline-variant]" />
-            <span className="text-xs text-[--color-on-surface-variant]">Term 2 Active</span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#dce9ff] text-[#0b1c30] text-xs font-medium">
+              <span className="material-symbols-outlined text-[13px] text-[#4cd7f6]">verified</span>
+              RAG Verified · Astra DB
+            </span>
           </div>
-          <h1 className="text-2xl sm:text-[2rem] leading-tight font-semibold text-[--color-on-surface] tracking-tight">
-            Good morning, Student.
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-tight">
+            Selamat Datang di SMANU 👋
           </h1>
-          <p className="text-sm text-[--color-on-surface-variant]">
-            Let&apos;s make your nutrition questions easier to understand.
+          <p className="text-sm text-slate-500">
+            Platform edukasi gizi pelajar berbasis AI — personalisasi, riset, dan interaktif.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start md:self-auto">
+        {/* Quick CTA */}
+        <div className="flex items-center gap-2 self-start lg:self-auto">
           <Link
             href="/ask-smanu"
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-[--color-primary] text-[--color-on-primary] text-sm font-medium shadow-sm hover:opacity-90 transition-opacity"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#131b2e] hover:bg-slate-700 text-white text-sm font-bold shadow-sm transition-all"
           >
-            <span className="material-symbols-outlined text-[18px] text-[--color-secondary-container]">
-              psychology
-            </span>
-            Ask SMANU
+            <span className="material-symbols-outlined text-[18px]">smart_toy</span>
+            Tanya SMANU AI
           </Link>
           <Link
             href="/nutrition-knowledge"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-[--color-surface-container-lowest] text-[--color-on-surface] text-sm font-medium shadow-sm hover:bg-[--color-surface-container-high] transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition-all shadow-sm"
           >
-            <span className="material-symbols-outlined text-[18px] text-[--color-on-surface-variant]">
-              menu_book
-            </span>
-            Explore Knowledge
+            <span className="material-symbols-outlined text-[18px] text-[#006c49]">menu_book</span>
+            Jelajahi Gizi
           </Link>
         </div>
+      </header>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          HERO BANNER — dark navy
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="relative w-full rounded-2xl overflow-hidden bg-[#131b2e] text-white shadow-xl">
+        {/* Ambient glow */}
+        <div className="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-[#006c49] opacity-20 blur-3xl pointer-events-none" />
+        <div className="absolute right-1/4 -bottom-24 w-80 h-80 rounded-full bg-[#4cd7f6] opacity-10 blur-3xl pointer-events-none" />
+
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 md:p-10 items-center">
+          {/* Left */}
+          <div className="lg:col-span-8 flex flex-col gap-4">
+            <div className="inline-flex items-center gap-1.5 self-start px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[#6cf8bb] text-xs font-semibold">
+              <span className="material-symbols-outlined text-[14px]">psychology</span>
+              SMANU Neural RAG · Adaptif Konteks Pelajar
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight leading-tight text-white">
+              Pilihan Gizi Cerdas untuk<br className="hidden sm:block" /> Fokus Belajarmu
+            </h2>
+            <p className="text-sm text-slate-400 max-w-xl leading-relaxed">
+              Asisten nutrisi berbasis riset ilmiah yang menyesuaikan rekomendasi dengan menu kantin sekolah dan budget harianmu.
+            </p>
+
+            {/* Suggested prompts */}
+            <div className="flex flex-col gap-2">
+              <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Coba tanya:</span>
+              <div className="flex flex-wrap gap-2">
+                {suggestedPrompts.map((p) => (
+                  <Link
+                    key={p.text}
+                    href={`/ask-smanu?q=${encodeURIComponent(p.text)}`}
+                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all text-left"
+                  >
+                    {p.emoji} {p.text}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right — mini energy metric */}
+          <div className="lg:col-span-4">
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#6cf8bb]">Status Sistem</span>
+                <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#6cf8bb] animate-pulse" />
+                  Live
+                </span>
+              </div>
+              {/* Sparkline SVG */}
+              <div className="w-full h-10 flex items-end">
+                <svg className="w-full h-full overflow-visible" fill="none" viewBox="0 0 200 40">
+                  <path d="M0 32 Q 30 35, 60 22 T 120 18 T 160 12 T 200 8" fill="none" stroke="#6cf8bb" strokeLinecap="round" strokeWidth="2.5" />
+                  <circle cx="200" cy="8" fill="#6cf8bb" r="4" className="animate-ping opacity-75" />
+                  <circle cx="200" cy="8" fill="white" r="3" />
+                </svg>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-[10px] text-slate-400">Langflow</p>
+                  <p className="text-xs font-bold text-[#6cf8bb]">RAG</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400">Astra DB</p>
+                  <p className="text-xs font-bold text-[#4cd7f6]">Vector</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400">Gemini</p>
+                  <p className="text-xs font-bold text-[#6cf8bb]">AI</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white/5 p-2.5 rounded-lg text-xs text-slate-400">
+                <span className="material-symbols-outlined text-[16px] text-[#6cf8bb]">wb_sunny</span>
+                Prototype v0.1 · IBM Langflow + Bob + Gemini
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          LIVE DATA ROW — 3 client widgets
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <LiveContextWidget />
+        <RecentSessionsWidget />
+        <NutriQuestProgressWidget />
       </div>
 
-      {/* ── AI Assistant teaser card ───────────────────────────────────────── */}
-      <Card padding="lg" className="relative overflow-hidden">
-        <div className="flex flex-col gap-4 max-w-3xl relative z-10">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[--color-secondary-container]/30 flex items-center justify-center text-[--color-secondary]">
-                <span className="material-symbols-outlined text-[24px]">smart_toy</span>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-[--color-on-surface]">
-                  How can SMANU help?
-                </h2>
-                <p className="text-xs text-[--color-on-surface-variant]">
-                  Ask questions grounded in academic nutrition science, tailored to your context.
-                </p>
-              </div>
-            </div>
-            <Badge variant="success">Astra DB Vector RAG</Badge>
-          </div>
-
-          {/* Input teaser — links to full Ask SMANU page */}
-          <Link
-            href="/ask-smanu"
-            className="flex items-center gap-3 px-4 py-3 bg-[--color-surface-container-low] rounded-xl hover:bg-[--color-surface-container] transition-colors group"
-          >
-            <span className="material-symbols-outlined text-[--color-on-surface-variant] text-[20px]">
-              search
-            </span>
-            <span className="text-sm text-[--color-outline] flex-1">
-              Ask a nutrition question…
-            </span>
-            <span className="material-symbols-outlined text-[--color-on-surface-variant] text-[18px] group-hover:translate-x-0.5 transition-transform">
-              arrow_forward
-            </span>
-          </Link>
-
-          {/* Suggested prompts */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-[--color-on-surface-variant] font-medium">Suggested:</span>
-            {["What is protein?", "How do I read a food label?", "Simple balanced lunch ideas"].map(
-              (p) => (
-                <Link
-                  key={p}
-                  href={`/ask-smanu?q=${encodeURIComponent(p)}`}
-                  className="px-3 py-1.5 rounded-full bg-[--color-surface-container] hover:bg-[--color-surface-container-high] text-[--color-on-surface] text-xs transition-colors"
-                >
-                  {p}
-                </Link>
-              )
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* ── Your Context ──────────────────────────────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════════════
+          FEATURE CARDS — 4 module pathways
+      ══════════════════════════════════════════════════════════════════════ */}
       <section>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-lg font-semibold text-[--color-on-surface]">Your Context</h2>
-              <span
-                className="material-symbols-outlined text-[16px] text-[--color-on-surface-variant]"
-                title="Context influences personalized explanations"
-              >
-                tune
-              </span>
-            </div>
-            <p className="text-xs text-[--color-on-surface-variant]">
-              Parameters used to scale explanations to your real-life environment.
-            </p>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight">Eksplorasi Fitur</h2>
+            <p className="text-xs text-slate-500">4 modul terintegrasi untuk belajar, konsultasi AI, dan uji kemampuan</p>
           </div>
-          <Link
-            href="/my-context"
-            className="inline-flex items-center gap-1 text-sm text-[--color-on-surface] hover:text-[--color-secondary] font-semibold transition-colors self-start"
-          >
-            Update Context
-            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-          </Link>
+          <span className="text-xs text-slate-400 font-medium hidden sm:block">4 Modul</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              label: "Situation",
-              val: "Not set",
-              sub: "Set your current situation",
-              icon: "schedule",
-              note: "Affects explanation depth",
-              href: "/my-context",
-            },
-            {
-              label: "Budget",
-              val: "Not set",
-              sub: "Cost-effective alternatives default",
-              icon: "payments",
-              note: "Configure",
-              href: "/my-context",
-            },
-            {
-              label: "Food Available",
-              val: "Not set",
-              sub: "Campus dining & dorm kitchen",
-              icon: "restaurant",
-              note: "Add staples",
-              href: "/my-context",
-            },
-            {
-              label: "Preferences",
-              val: "Not set",
-              sub: "Allergies, vegetarian, halal",
-              icon: "checklist",
-              note: "Select preferences",
-              href: "/my-context",
-            },
-          ].map((ctx) => (
-            <Card key={ctx.label} className="flex flex-col justify-between">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-[--color-on-surface-variant] uppercase tracking-wider font-medium">
-                    {ctx.label}
-                  </span>
-                  <Badge variant="neutral">Optional</Badge>
-                </div>
-                <span className="text-lg text-[--color-outline] font-normal mt-1">{ctx.val}</span>
-                <span className="text-xs text-[--color-outline]">{ctx.sub}</span>
-              </div>
-              <div className="mt-4">
-                <Link
-                  href={ctx.href}
-                  className="text-xs text-[--color-secondary] font-medium hover:underline flex items-center gap-1"
-                >
-                  {ctx.note}
-                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                </Link>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        <div className="mt-2 flex items-center gap-1.5 text-[--color-on-surface-variant]">
-          <span className="material-symbols-outlined text-[16px] text-[--color-secondary]">lock</span>
-          <span className="text-xs">
-            Information is kept private and strictly used to tailor nutrition explanations.
-          </span>
-        </div>
-      </section>
-
-      {/* ── Quick Actions ─────────────────────────────────────────────────── */}
-      <section>
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-[--color-on-surface]">Quick Actions</h2>
-          <p className="text-xs text-[--color-on-surface-variant]">
-            Direct pathways for fast educational queries and comparison tasks.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action) => {
-            const inner = (
-              <>
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <div
-                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-                        action.available
-                          ? "bg-[--color-surface-container] text-[--color-on-surface] group-hover:bg-[--color-primary] group-hover:text-[--color-on-primary]"
-                          : "bg-[--color-surface-container] text-[--color-on-surface-variant]"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">{action.icon}</span>
-                    </div>
-                    <Badge variant={action.available ? "success" : "neutral"}>
-                      {action.status}
-                    </Badge>
-                  </div>
-                  <h3
-                    className={`text-base font-semibold transition-colors ${
-                      action.available
-                        ? "text-[--color-on-surface] group-hover:text-[--color-secondary]"
-                        : "text-[--color-on-surface]"
-                    }`}
-                  >
-                    {action.title}
-                  </h3>
-                  <p className="text-xs text-[--color-on-surface-variant] leading-relaxed">
-                    {action.desc}
-                  </p>
-                </div>
-                <div className="mt-4 flex items-center gap-1 text-sm font-semibold text-[--color-on-surface-variant]">
-                  {action.available ? (
-                    <>
-                      <span className="text-[--color-on-surface]">{action.cta}</span>
-                      <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform text-[--color-on-surface]">
-                        arrow_forward
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[14px]">lock_clock</span>
-                      <span>{action.cta}</span>
-                    </>
-                  )}
-                </div>
-              </>
-            );
-
-            return action.href ? (
-              <Link
-                key={action.title}
-                href={action.href}
-                className="p-6 bg-[--color-surface-container-lowest] rounded-xl shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-              >
-                {inner}
-              </Link>
-            ) : (
-              <div
-                key={action.title}
-                className="p-6 bg-[--color-surface-container-lowest] rounded-xl shadow-sm flex flex-col justify-between opacity-75"
-              >
-                {inner}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── Knowledge Preview ─────────────────────────────────────────────── */}
-      <section>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-[--color-on-surface]">
-              Explore Nutrition Knowledge
-            </h2>
-            <p className="text-xs text-[--color-on-surface-variant]">
-              Core scientific modules cataloged for query indexing and student study.
-            </p>
-          </div>
-          <Link
-            href="/nutrition-knowledge"
-            className="text-sm text-[--color-secondary] font-semibold flex items-center gap-1 hover:underline self-start"
-          >
-            View all topics
-            <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {knowledgeTopics.map((topic) => (
+          {featureCards.map((card) => (
             <Link
-              key={topic.id}
-              href="/nutrition-knowledge"
-              className="bg-[--color-surface-container-lowest] rounded-xl p-4 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow group"
+              key={card.title}
+              href={card.href}
+              className="group bg-white rounded-2xl p-5 shadow-sm hover:shadow-md border border-slate-100 hover:border-slate-200 transition-all flex flex-col justify-between"
             >
-              <div className="flex flex-col gap-1">
-                <div className="h-28 rounded-lg overflow-hidden bg-[--color-surface-container] mb-2 relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={topic.imgUrl}
-                    alt={topic.title}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-[--color-surface]/90 backdrop-blur text-xs font-semibold text-[--color-on-surface]">
-                    {topic.label}
-                  </span>
+              <div>
+                <div className={`w-12 h-12 rounded-xl ${card.iconBg} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                  <span className="material-symbols-outlined text-[26px]">{card.icon}</span>
                 </div>
-                <h3 className="text-sm font-semibold text-[--color-on-surface] group-hover:text-[--color-secondary] transition-colors">
-                  {topic.title}
-                </h3>
-                <p className="text-xs text-[--color-on-surface-variant] line-clamp-3">{topic.desc}</p>
+                <div className="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                  {card.badge}
+                </div>
+                <h3 className="text-sm font-bold text-slate-900 mb-1.5 leading-tight">{card.title}</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">{card.desc}</p>
               </div>
-              <div className="mt-3">
-                <span className="w-full inline-flex justify-center py-1.5 rounded-lg bg-[--color-surface-container] text-[--color-on-surface] text-xs font-semibold hover:bg-[--color-surface-container-high] transition-colors">
-                  View Topic
-                </span>
+              <div className={`pt-4 flex items-center gap-1 text-xs font-semibold ${card.ctaColor}`}>
+                <span>{card.cta}</span>
+                <span className="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
               </div>
             </Link>
           ))}
         </div>
       </section>
 
-      {/* ── How SMANU Works ───────────────────────────────────────────────── */}
-      <Card padding="lg">
-        <div className="flex flex-col gap-1 mb-6">
-          <div className="flex items-center gap-1.5 text-[--color-secondary] text-xs font-semibold uppercase">
-            <span className="material-symbols-outlined text-[16px]">account_tree</span>
-            Transparent Architecture
-          </div>
-          <h2 className="text-lg font-semibold text-[--color-on-surface]">How SMANU Works</h2>
-          <p className="text-xs text-[--color-on-surface-variant]">
-            A retrieval-based AI workflow that connects your question with relevant nutrition knowledge.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { num: "01", icon: "badge", title: "Your Context", desc: "Situation, dining setting, dietary parameters, and constraints." },
-            { num: "02", icon: "record_voice_over", title: "Your Question", desc: "Student submits a prompt in natural, plain everyday language." },
-            { num: "03", icon: "dataset", title: "Relevant Knowledge", desc: "Vector semantic retrieval via Astra DB & Langflow pipelines." },
-            { num: "04", icon: "assignment_turned_in", title: "Structured Answer", desc: "Objective explanation backed by clear source citations." },
-          ].map((step) => (
-            <div key={step.num} className="flex flex-col gap-2 p-4 rounded-lg bg-[--color-surface-container-low]">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-[--color-secondary]">{step.num}</span>
-                <span className="material-symbols-outlined text-[--color-on-surface-variant] text-[20px]">
-                  {step.icon}
-                </span>
-              </div>
-              <h3 className="text-sm font-semibold text-[--color-on-surface]">{step.title}</h3>
-              <p className="text-xs text-[--color-on-surface-variant]">{step.desc}</p>
+      {/* ══════════════════════════════════════════════════════════════════════
+          DAILY NUTRITION INSIGHT
+      ══════════════════════════════════════════════════════════════════════ */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Insight card */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex flex-col gap-4 relative overflow-hidden">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 rounded-l-2xl" />
+          <div className="flex items-center justify-between gap-2 flex-wrap pl-2">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#6cf8bb] text-[#002113] text-xs font-bold">
+              <span className="material-symbols-outlined text-[14px]">tips_and_updates</span>
+              Insight Gizi Hari Ini
             </div>
-          ))}
-        </div>
-      </Card>
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">+35% Daya Fokus</span>
+          </div>
+          <div className="pl-2">
+            <h3 className="text-base font-bold text-slate-900 leading-tight">
+              Atasi Lemas di Jam Ke-5 Sekolah
+            </h3>
+            <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+              Mengombinasikan <strong className="text-slate-800">telur rebus + sayur bening</strong> di kantin jauh lebih menjaga kewaspadaan otak dibanding mie instan dobel karbohidrat.
+            </p>
+          </div>
 
-      {/* ── Responsible AI notice ─────────────────────────────────────────── */}
-      <aside className="p-4 bg-[--color-surface-container-high] rounded-xl flex items-start gap-3">
-        <span className="material-symbols-outlined text-[20px] text-[--color-on-surface] mt-0.5 flex-shrink-0">
-          verified_user
-        </span>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-          <p className="text-sm text-[--color-on-surface]">
-            <strong className="font-semibold">Responsible AI Notice:</strong> SMANU provides
-            educational nutrition information and is not a replacement for professional medical or
-            nutrition advice.
+          {/* Comparison bars */}
+          <div className="bg-slate-50 rounded-xl p-3 flex flex-col gap-2.5 pl-2">
+            <div>
+              <div className="flex justify-between text-xs text-slate-700 mb-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  Protein + Serat
+                </span>
+                <span className="font-semibold text-emerald-600">Stabil 4 jam</span>
+              </div>
+              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-emerald-500 h-full rounded-full" style={{ width: "85%" }} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs text-slate-700 mb-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-400" />
+                  Karbohidrat Sederhana
+                </span>
+                <span className="font-semibold text-red-500">Spike → Crash</span>
+              </div>
+              <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-red-400 h-full rounded-full" style={{ width: "35%" }} />
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-400 italic pl-2">
+            &ldquo;Asam amino tirosin dari telur mendukung neurotransmiter dopamin untuk konsentrasi mengerjakan soal matematika.&rdquo;
           </p>
+
+          <div className="flex items-center justify-between pl-2">
+            <span className="text-[11px] text-slate-400">Sumber: Litbang Gizi Remaja & Biokimia Otak</span>
+            <Link href="/nutrition-knowledge" className="text-xs font-semibold text-emerald-600 hover:underline flex items-center gap-0.5">
+              Baca selengkapnya
+              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* How SMANU works — mini 4-step */}
+        <div className="bg-[#131b2e] rounded-2xl p-5 text-white flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#6cf8bb] text-[20px]">account_tree</span>
+            <div>
+              <h3 className="text-sm font-bold text-white">Bagaimana SMANU Bekerja</h3>
+              <p className="text-[11px] text-slate-400">Retrieval-Augmented Generation Pipeline</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            {[
+              { n: "01", icon: "badge", title: "Konteks Kamu", desc: "Situasi, budget, makanan tersedia" },
+              { n: "02", icon: "record_voice_over", title: "Pertanyaanmu", desc: "Bahasa alami sehari-hari" },
+              { n: "03", icon: "dataset", title: "Retrieval Astra DB", desc: "Semantic search knowledge base" },
+              { n: "04", icon: "assignment_turned_in", title: "Jawaban Terstruktur", desc: "Berbasis bukti ilmiah" },
+            ].map((step, i, arr) => (
+              <div key={step.n} className="flex items-start gap-3">
+                <div className="flex flex-col items-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#006c49]/30 flex items-center justify-center flex-shrink-0">
+                    <span className="text-[#6cf8bb] text-xs font-black">{step.n}</span>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div className="w-px h-4 bg-[#006c49]/30 mt-1" />
+                  )}
+                </div>
+                <div className="pt-1.5">
+                  <p className="text-xs font-semibold text-white leading-tight">{step.title}</p>
+                  <p className="text-[11px] text-slate-400">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
           <Link
-            href="/help"
-            className="text-xs text-[--color-secondary] hover:underline whitespace-nowrap font-medium flex items-center gap-1 self-start"
+            href="/how-it-works"
+            className="flex items-center justify-center gap-2 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white text-xs font-semibold transition-colors"
           >
-            Read AI Policy
-            <span className="material-symbols-outlined text-[14px]">launch</span>
+            Pelajari arsitektur lengkap
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
           </Link>
         </div>
-      </aside>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          RESPONSIBLE AI FOOTER
+      ══════════════════════════════════════════════════════════════════════ */}
+      <footer className="rounded-2xl bg-slate-50 border border-slate-200 p-4 md:p-5">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 justify-between">
+          <div className="flex items-start gap-3 max-w-3xl">
+            <div className="w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="material-symbols-outlined text-[18px] text-slate-600">policy</span>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-800">🛡️ Catatan Edukasi & AI Bertanggung Jawab</p>
+              <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                SMANU menyediakan informasi literasi gizi edukatif berbasis pedoman resmi Kementerian Kesehatan RI dan riset terverifikasi.{" "}
+                <strong className="text-slate-700">Bukan pengganti konsultasi, diagnosis, atau terapi medis oleh dokter atau nutrisionis klinis bersertifikat.</strong>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link href="/help" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors">
+              Etika AI
+            </Link>
+            <Link href="/about" className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors">
+              Tentang SMANU
+            </Link>
+          </div>
+        </div>
+      </footer>
+
     </div>
   );
 }

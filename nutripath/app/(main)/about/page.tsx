@@ -10,7 +10,7 @@ import { SmanuLogo } from "@/components/SmanuLogo";
 // ─────────────────────────────────────────────────────────────
 
 const DEVELOPER = {
-  displayName: "Fhazwan Athar Ramadhan",
+  displayName: "Fhazwan Athar Ramadhan ",
   role: "Student Developer & Creator of SMANU",
   bio: "Pelajar yang mengembangkan SMANU sebagai platform edukasi gizi berbasis AI. Tertarik pada perpaduan antara teknologi, pendidikan, dan kesehatan sehari-hari — khususnya bagaimana AI dapat membantu pelajar membuat keputusan makan yang lebih baik dengan sumber daya terbatas.",
   motivation:
