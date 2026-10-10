@@ -125,6 +125,114 @@ const STARTERS = [
 ];
 
 // ─────────────────────────────────────────────────────────────
+// Bubble size constant (px)
+// ─────────────────────────────────────────────────────────────
+const BUBBLE = 56; // w-14 h-14 = 56px
+const DRAG_THRESHOLD = 5; // px — below this = click, above = drag
+
+// ─────────────────────────────────────────────────────────────
+// useDraggable — pointer-event drag hook
+// Returns: { ref, style, isDragging, onPointerDown, movedRef }
+//   movedRef.current = true when the last pointerdown ended as a drag
+// ─────────────────────────────────────────────────────────────
+
+interface DragPos { x: number; y: number }
+
+function useDraggable(initialPos: DragPos) {
+  // pos stores the TOP-LEFT corner of the bubble in viewport coords
+  const [pos, setPos] = useState<DragPos>(initialPos);
+  const draggingRef = useRef(false);
+  const startPointerRef = useRef<DragPos>({ x: 0, y: 0 });
+  const startPosRef = useRef<DragPos>(initialPos);
+  // true after a pointermove that exceeded DRAG_THRESHOLD
+  const movedRef = useRef(false);
+
+  /** Clamp position so bubble stays fully inside viewport */
+  function clamp(x: number, y: number): DragPos {
+    const maxX = window.innerWidth - BUBBLE;
+    const maxY = window.innerHeight - BUBBLE;
+    return {
+      x: Math.max(0, Math.min(x, maxX)),
+      y: Math.max(0, Math.min(y, maxY)),
+    };
+  }
+
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    // Only primary button (left click / single touch)
+    if (e.button !== 0 && e.pointerType !== "touch") return;
+
+    draggingRef.current = true;
+    movedRef.current = false;
+    startPointerRef.current = { x: e.clientX, y: e.clientY };
+    startPosRef.current = { ...pos };
+
+    // Capture pointer so we get events even outside the element
+    e.currentTarget.setPointerCapture(e.pointerId);
+    // Prevent text selection during drag
+    e.preventDefault();
+  }, [pos]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!draggingRef.current) return;
+
+    const dx = e.clientX - startPointerRef.current.x;
+    const dy = e.clientY - startPointerRef.current.y;
+
+    // Mark as "moved" once threshold is exceeded
+    if (!movedRef.current && (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD)) {
+      movedRef.current = true;
+    }
+
+    if (movedRef.current) {
+      const newPos = clamp(
+        startPosRef.current.x + dx,
+        startPosRef.current.y + dy,
+      );
+      setPos(newPos);
+    }
+  }, []);
+
+  const onPointerUp = useCallback(() => {
+    draggingRef.current = false;
+    // movedRef.current stays true until the next pointerdown — caller checks it
+  }, []);
+
+  // Keep bubble inside viewport on window resize
+  useEffect(() => {
+    function handleResize() {
+      setPos((p) => clamp(p.x, p.y));
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const style: React.CSSProperties = {
+    left: pos.x,
+    top: pos.y,
+    // override any bottom/right positioning
+    bottom: "auto",
+    right: "auto",
+  };
+
+  return { pos, style, movedRef, onPointerDown, onPointerMove, onPointerUp, setPos };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Compute initial position: bottom-left area on mobile,
+// bottom-right on desktop — safe from Ask SMANU Send button
+// ─────────────────────────────────────────────────────────────
+
+function getInitialPos(): DragPos {
+  if (typeof window === "undefined") return { x: 0, y: 0 };
+  // Place bubble 80px from bottom, 16px from right by default
+  return {
+    x: window.innerWidth - BUBBLE - 16,
+    y: window.innerHeight - BUBBLE - 80,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main widget
 // ─────────────────────────────────────────────────────────────
 
@@ -133,6 +241,22 @@ export function AiChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+
+  // ── Hydration-safe mount ──────────────────────────────────
+  // Server selalu render { x: 0, y: 0 }.
+  // Setelah client mount, posisi di-update ke nilai nyata berbasis viewport.
+  const [mounted, setMounted] = useState(false);
+
+  // Posisi awal: server-safe ({ x:0, y:0 }), di-update setelah mount
+  const [initPos] = useState<DragPos>({ x: 0, y: 0 });
+  const { pos, style: bubbleStyle, movedRef, onPointerDown, onPointerMove, onPointerUp, setPos } = useDraggable(initPos);
+
+  // Setelah mount: pindah bubble ke posisi viewport yang benar
+  useEffect(() => {
+    setMounted(true);
+    setPos(getInitialPos());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -176,8 +300,6 @@ export function AiChatWidget() {
       content: text,
     };
 
-    // Snapshot current messages BEFORE adding the new user message
-    // so we build history from what was already in the conversation
     const historySnapshot = messages
       .filter((m) => !m.error)
       .map(({ role, content }) => ({ role, content }));
@@ -226,7 +348,6 @@ export function AiChatWidget() {
     }
   }
 
-  // Remove last error bubble so user can retry cleanly
   function retryLast() {
     setMessages((prev) => prev.filter((m) => !m.error));
     setStatus("idle");
@@ -238,7 +359,51 @@ export function AiChatWidget() {
     setStatus("idle");
   }
 
+  // Toggle open — only if this was a click (not a drag)
+  function handleBubbleClick() {
+    if (movedRef.current) {
+      // Was a drag — do not toggle; reset flag for next interaction
+      movedRef.current = false;
+      return;
+    }
+    setOpen((v) => !v);
+  }
+
   const hasMessages = messages.length > 0;
+
+  // ── Panel placement ───────────────────────────────────────
+  // Compute whether the panel should open above or to the left of the bubble
+  // to avoid clipping at viewport edges.
+  const PANEL_W = 380;
+  const PANEL_H = 580;
+  const PANEL_GAP = 12; // gap between bubble and panel
+
+  function getPanelStyle(): React.CSSProperties {
+    if (typeof window === "undefined") return {};
+
+    // Horizontal: prefer to the right of bubble but clamp to viewport
+    let left = pos.x;
+    // If panel would overflow right, shift it left
+    if (left + PANEL_W > window.innerWidth - 8) {
+      left = window.innerWidth - PANEL_W - 8;
+    }
+    // Never go below x=8
+    left = Math.max(8, left);
+
+    // Vertical: prefer above bubble, fall back to below
+    let top = pos.y - PANEL_H - PANEL_GAP;
+    if (top < 8) {
+      // Not enough room above — try below
+      top = pos.y + BUBBLE + PANEL_GAP;
+    }
+    // If below also overflows, just clamp to 8px from bottom
+    if (top + PANEL_H > window.innerHeight - 8) {
+      top = window.innerHeight - PANEL_H - 8;
+    }
+    top = Math.max(8, top);
+
+    return { left, top, right: "auto", bottom: "auto" };
+  }
 
   return (
     <>
@@ -254,21 +419,21 @@ export function AiChatWidget() {
       {/* ── Chat Panel ──────────────────────────────────────────── */}
       {/*
         Mobile  : full-width, anchored to bottom, max 92dvh, slide up/down
-        Desktop : fixed-size floating panel, bottom-right
+        Desktop : floating panel positioned relative to bubble
       */}
       <div
         role="dialog"
         aria-label="SMANU AI Assistant"
         aria-modal={open}
+        style={open ? getPanelStyle() : undefined}
         className={clsx(
           "fixed z-[70] flex flex-col bg-white",
           "transition-[transform,opacity] duration-300 ease-out will-change-transform",
           // Mobile layout — full width slide-up sheet
           "inset-x-0 bottom-0 rounded-t-2xl",
           "max-h-[92dvh] min-h-0",
-          // Desktop layout — floating panel
-          "lg:inset-auto lg:bottom-24 lg:right-6",
-          "lg:w-[380px] lg:max-h-[580px] lg:rounded-2xl",
+          // Desktop layout — floating panel (pos computed by getPanelStyle)
+          "lg:inset-auto lg:w-[380px] lg:max-h-[580px] lg:rounded-2xl",
           // Open / closed states
           open
             ? "translate-y-0 opacity-100 pointer-events-auto shadow-2xl"
@@ -294,7 +459,6 @@ export function AiChatWidget() {
               title="Bersihkan percakapan"
               aria-label="Bersihkan percakapan"
             >
-              {/* trash icon */}
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -356,9 +520,7 @@ export function AiChatWidget() {
                 msg.role === "user" ? "justify-end" : "justify-start"
               )}
             >
-              {/* AI avatar — only on model messages */}
               {msg.role === "model" && <AiAvatar size={24} />}
-
               <div
                 className={clsx(
                   "max-w-[80%] min-w-0 px-3 py-2.5 rounded-2xl",
@@ -392,7 +554,6 @@ export function AiChatWidget() {
             </div>
           )}
 
-          {/* Scroll anchor */}
           <div ref={bottomRef} />
         </div>
 
@@ -442,27 +603,40 @@ export function AiChatWidget() {
         </div>
       </div>
 
-      {/* ── Floating trigger button ──────────────────────────────── */}
+      {/* ── Floating draggable bubble ─────────────────────────────── */}
+      {/*
+        Uses Pointer Events API for unified mouse + touch drag.
+        - onPointerDown: start drag, capture pointer
+        - onPointerMove: update position if threshold exceeded
+        - onPointerUp:   end drag
+        - onClick:       only fires if movedRef.current is false (tap, not drag)
+      */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onClick={handleBubbleClick}
         aria-label={open ? "Tutup SMANU AI Assistant" : "Buka SMANU AI Assistant"}
+        // Touch-action none: prevent browser scroll/zoom hijacking the drag
+        style={{ ...bubbleStyle, touchAction: "none" }}
         className={clsx(
-          "fixed z-[70] bottom-6 right-6",
+          "fixed z-[70]",
           "w-14 h-14 rounded-full shadow-xl",
           "bg-[#006c49] hover:bg-[#005236] text-white",
           "flex items-center justify-center",
-          "transition-all duration-300",
-          open ? "rotate-90 scale-95" : "rotate-0 scale-100"
+          "transition-[background-color,opacity,transform] duration-200",
+          "select-none cursor-grab active:cursor-grabbing",
+          open ? "opacity-90 scale-95" : "opacity-100 scale-100",
+          // Sembunyikan sampai client mount agar tidak ada hydration mismatch
+          !mounted && "opacity-0 pointer-events-none"
         )}
       >
         {open ? (
-          /* X icon when open */
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <svg className="w-5 h-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         ) : (
-          /* Chat bubble icon when closed */
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+          <svg className="w-6 h-6 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
               strokeLinecap="round"
@@ -471,6 +645,20 @@ export function AiChatWidget() {
           </svg>
         )}
       </button>
+
+      {/* Drag hint tooltip — shown briefly on first load, desktop only */}
+      <style>{`
+        @keyframes fadeHint {
+          0%   { opacity: 0; transform: translateY(4px); }
+          15%  { opacity: 1; transform: translateY(0);   }
+          75%  { opacity: 1; transform: translateY(0);   }
+          100% { opacity: 0; transform: translateY(4px); }
+        }
+        .drag-hint {
+          animation: fadeHint 3.5s ease-out 1.2s both;
+          pointer-events: none;
+        }
+      `}</style>
     </>
   );
 }

@@ -105,6 +105,9 @@ function AskSmanuContent() {
   const [budget, setBudget] = useState("Budget");
   const [food, setFood] = useState("Canteen");
 
+  // Mobile context drawer
+  const [contextOpen, setContextOpen] = useState(false);
+
   // Chat
   const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -232,6 +235,150 @@ function AskSmanuContent() {
   return (
     <div className="flex h-full overflow-hidden bg-[#F8FAFC]">
 
+      {/* ── Mobile context bottom sheet drawer ─────────────────────────────── */}
+      {/* Backdrop */}
+      {contextOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 xl:hidden"
+          onClick={() => setContextOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Bottom sheet panel */}
+      <div
+        className={clsx(
+          "fixed bottom-0 left-0 right-0 z-50 xl:hidden",
+          "bg-white rounded-t-3xl shadow-2xl border-t border-slate-200",
+          "transition-transform duration-300 ease-out will-change-transform",
+          "max-h-[85dvh] flex flex-col",
+          contextOpen ? "translate-y-0" : "translate-y-full"
+        )}
+        aria-modal="true"
+        role="dialog"
+        aria-label="Konteks Saya"
+      >
+        {/* Drag handle */}
+        <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-300" />
+        </div>
+
+        {/* Sheet header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🥗</span>
+            <h2 className="text-sm font-bold text-slate-900">Konteks Saya</h2>
+            <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Active</span>
+          </div>
+          <button
+            onClick={() => setContextOpen(false)}
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+            aria-label="Tutup panel konteks"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M6 18L18 6M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+            </svg>
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 overscroll-contain">
+
+          {/* Situasi */}
+          <ContextCard title="📍 Situasi">
+            <div className="grid grid-cols-2 gap-1.5">
+              {["School Day", "Dormitory", "Exam Week", "Training"].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSituation(s)}
+                  className={clsx(
+                    "py-2 px-3 rounded-xl text-[12px] font-medium text-center transition-all",
+                    situation === s
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 active:bg-slate-300"
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </ContextCard>
+
+          {/* Budget */}
+          <ContextCard title="🪙 Budget">
+            <div className="grid grid-cols-2 gap-1.5">
+              {["Budget", "Moderate", "Flexible", "Not Selected"].map((b) => (
+                <button
+                  key={b}
+                  onClick={() => setBudget(b)}
+                  className={clsx(
+                    "py-2 px-3 rounded-xl text-[12px] font-medium text-center transition-all",
+                    budget === b
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 active:bg-slate-300"
+                  )}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          </ContextCard>
+
+          {/* Makanan Tersedia */}
+          <ContextCard title="🍴 Makanan Tersedia">
+            <div className="grid grid-cols-2 gap-1.5">
+              {["Canteen", "Small Kitchen", "Packaged Snacks", "Not Selected"].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFood(f)}
+                  className={clsx(
+                    "py-2 px-3 rounded-xl text-[12px] font-medium text-center transition-all",
+                    food === f
+                      ? "bg-slate-900 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200 active:bg-slate-300"
+                  )}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </ContextCard>
+
+          {/* Preferensi */}
+          <ContextCard title="✨ Preferensi">
+            <div className="flex flex-wrap gap-1.5">
+              {FOOD_PREFERENCES.map((p) => (
+                <span key={p} className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-medium rounded-lg border border-slate-200/60">
+                  {p}
+                </span>
+              ))}
+            </div>
+          </ContextCard>
+
+          {/* Tips */}
+          <div className="bg-amber-50/70 border border-amber-200/70 rounded-2xl p-3.5 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+              <span>💡</span>
+              <span>Tips Hari Ini</span>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">{QUICK_TIP}</p>
+          </div>
+
+          {/* Extra bottom padding so content clears the safe area on iOS */}
+          <div className="h-4" />
+        </div>
+
+        {/* Apply button */}
+        <div className="px-5 pb-6 pt-3 border-t border-slate-100 shrink-0 bg-white">
+          <button
+            onClick={() => setContextOpen(false)}
+            className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-semibold text-sm transition-all"
+          >
+            Terapkan Konteks
+          </button>
+        </div>
+      </div>
+
       {/* ── LEFT: Main chat area ───────────────────────────────────────────── */}
       <main className="flex flex-col flex-1 min-w-0 bg-[#F8FAFC] overflow-hidden">
 
@@ -240,7 +387,35 @@ function AskSmanuContent() {
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-xs font-semibold text-slate-800">SMANU</span>
           <span className="text-xs text-slate-400">•</span>
-          <span className="text-xs text-slate-500">Context-aware nutrition assistant</span>
+          <span className="text-xs text-slate-500 hidden sm:inline">Context-aware nutrition assistant</span>
+        </div>
+
+        {/* ── Mobile context bar (below breadcrumb, hidden on xl) ─────────── */}
+        <div className="xl:hidden shrink-0 px-3 py-2 bg-white border-b border-slate-100 flex items-center gap-2">
+          {/* Active context chips */}
+          <div className="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar min-w-0">
+            <span className="text-[10px] text-slate-400 font-medium shrink-0">Konteks:</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-semibold shrink-0">
+              📍 {situation}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold shrink-0 border border-slate-200">
+              🪙 {budget}
+            </span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-semibold shrink-0 border border-slate-200">
+              🍴 {food}
+            </span>
+          </div>
+          {/* Button to open drawer */}
+          <button
+            onClick={() => setContextOpen(true)}
+            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-[11px] font-semibold transition-all shadow-sm"
+            aria-label="Buka panel konteks"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
+            </svg>
+            Konteks Saya
+          </button>
         </div>
 
         {/* Scrollable message stream */}

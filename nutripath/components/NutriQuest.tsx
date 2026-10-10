@@ -10,6 +10,7 @@ import {
   QUESTION_BANK,
   QuizQuestion,
 } from "@/lib/nutriquest-bank";
+import { saveQuestResult } from "@/lib/nutriquest-store";
 
 // ── Achievement logic ──────────────────────────────────────────────────────
 function getAchievement(correct: number, total: number) {
@@ -144,6 +145,21 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
     if (questions.some((q) => !answers[q.id])) { setShowValidation(true); return; }
     completedDate.current = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
     setPhase("result");
+
+    // ── Simpan hasil ke localStorage ──────────────────────────
+    saveQuestResult({
+      id: crypto.randomUUID(),
+      score: questions.filter((q) => answers[q.id] === q.correctAnswer).length,
+      total: questions.length,
+      pct: Math.round((questions.filter((q) => answers[q.id] === q.correctAnswer).length / questions.length) * 100),
+      achievement: getAchievement(
+        questions.filter((q) => answers[q.id] === q.correctAnswer).length,
+        questions.length
+      ).title,
+      domain: selectedDomain,
+      timestamp: Date.now(),
+      completedDate: completedDate.current,
+    });
   }
 
   const handleDownload = useCallback(() => {
