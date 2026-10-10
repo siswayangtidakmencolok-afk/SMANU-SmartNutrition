@@ -129,12 +129,12 @@ export default function DashboardPage() {
             {/* Suggested prompts */}
             <div className="flex flex-col gap-2">
               <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Coba tanya:</span>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 max-w-full">
                 {suggestedPrompts.map((p) => (
                   <Link
                     key={p.text}
                     href={`/ask-smanu?q=${encodeURIComponent(p.text)}`}
-                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all text-left"
+                    className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all text-left break-words max-w-[calc(100%-8px)]"
                   >
                     {p.emoji} {p.text}
                   </Link>
@@ -154,11 +154,11 @@ export default function DashboardPage() {
                 </span>
               </div>
               {/* Sparkline SVG */}
-              <div className="w-full h-10 flex items-end">
-                <svg className="w-full h-full overflow-visible" fill="none" viewBox="0 0 200 40">
+              <div className="w-full h-10 flex items-end overflow-hidden">
+                <svg className="w-full h-full" fill="none" viewBox="0 0 200 40">
                   <path d="M0 32 Q 30 35, 60 22 T 120 18 T 160 12 T 200 8" fill="none" stroke="#6cf8bb" strokeLinecap="round" strokeWidth="2.5" />
-                  <circle cx="200" cy="8" fill="#6cf8bb" r="4" className="animate-ping opacity-75" />
-                  <circle cx="200" cy="8" fill="white" r="3" />
+                  <circle cx="196" cy="9" fill="#6cf8bb" r="4" className="animate-ping opacity-75" />
+                  <circle cx="196" cy="9" fill="white" r="3" />
                 </svg>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">

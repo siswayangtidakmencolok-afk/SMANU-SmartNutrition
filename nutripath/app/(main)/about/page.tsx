@@ -64,6 +64,20 @@ const OTHER_PROJECTS: {
     url: "https://siswayangtidakmencolok-afk.github.io/website-frieren/",
     status: "live",
   },
+  {
+    title: "FoodsStreets",
+    desc: "Aplikasi pemesanan makanan yang interaktif dilengkapi menu yang beragam, maps pesanan, history dan akun yang tersimpan aman",
+    tags: ["JavaScript, ReactNative, Supabase, MySQL APIGateaway"],
+    url: "https://app-pemesananmakanan.vercel.app/",
+    status: "live",
+  },
+  {
+    title: "System Solars 3D",
+    desc: "web sistem tata surya 3d model dan bisa mengeksplore jelajahi luar angkasa",
+    tags: ["JavaScript, Theerejs, css"],
+    url: "https://globe3d-byfhaz.netlify.app/",
+    status: "live",
+  },
   // Contoh format tambah proyek:
   // {
   //   title: "Nama Proyek",

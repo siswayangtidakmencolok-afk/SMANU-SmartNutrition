@@ -34,7 +34,15 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError("Email/username atau password salah. Coba lagi.");
+        // "CredentialsSignin" = wrong email/password (authorize returned null)
+        // Anything else = server/DB error (authorize threw an error)
+        if (result.error === "CredentialsSignin") {
+          setError("Email/username atau password salah. Coba lagi.");
+        } else if (result.error.includes("DatabaseError") || result.error.includes("database") || result.error.includes("connect")) {
+          setError("Tidak dapat terhubung ke database. Periksa koneksi internet kamu dan coba lagi dalam beberapa saat.");
+        } else {
+          setError("Server tidak dapat dihubungi. Periksa koneksi internet kamu, lalu coba lagi.");
+        }
       } else if (result?.ok) {
         router.push("/");
         router.refresh();

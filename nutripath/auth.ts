@@ -53,13 +53,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           user = results[0];
         } catch (err) {
-          console.error("[auth] DB lookup error:", err instanceof Error ? err.message : String(err));
-          return null;
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error("[auth] DB lookup error:", msg);
+          // Throw so NextAuth surfaces this as a generic error (not CredentialsSignin)
+          // The login page checks for result.error !== "CredentialsSignin" to show the
+          // "server tidak dapat dihubungi" message instead of "password salah".
+          throw new Error("DatabaseError");
         }
 
         if (!user) return null;
 
-        const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+        let passwordMatch = false;
+        try {
+          passwordMatch = await bcrypt.compare(password, user.passwordHash);
+        } catch (err) {
+          console.error("[auth] bcrypt error:", err instanceof Error ? err.message : String(err));
+          return null;
+        }
         if (!passwordMatch) return null;
 
         // Return only the fields that should go into the JWT — never the hash
