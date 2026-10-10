@@ -194,6 +194,53 @@ export default function DashboardPage() {
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════════
+          NEW FEATURES ROW — Food Challenge + Learning Journey
+      ══════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Food Challenge CTA */}
+        <Link
+          href="/food-challenge"
+          className="group relative bg-[#131b2e] rounded-2xl p-5 shadow-sm hover:shadow-lg border border-slate-700 transition-all overflow-hidden flex flex-col gap-4"
+        >
+          <div className="absolute right-0 top-0 w-40 h-40 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-bold mb-3">
+              ⚡ Baru
+            </div>
+            <h3 className="text-base font-bold text-white leading-tight">Food Challenge</h3>
+            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+              Simulasi pilihan makanan harian. Uji kemampuan manajemen budget dan nutrisi dalam skenario nyata.
+            </p>
+          </div>
+          <div className="relative z-10 flex items-center gap-1.5 text-xs font-bold text-emerald-400 group-hover:gap-2.5 transition-all">
+            Mulai tantangan
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </div>
+        </Link>
+
+        {/* Learning Journey CTA */}
+        <Link
+          href="/learning-journey"
+          className="group relative bg-white rounded-2xl p-5 shadow-sm hover:shadow-md border border-slate-100 hover:border-slate-200 transition-all overflow-hidden flex flex-col gap-4"
+        >
+          <div className="absolute right-0 top-0 w-40 h-40 rounded-full bg-[#006c49]/10 blur-2xl pointer-events-none" />
+          <div className="relative z-10">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#006c49]/10 text-[#006c49] text-[10px] font-bold mb-3">
+              📊 Progres
+            </div>
+            <h3 className="text-base font-bold text-slate-900 leading-tight">Learning Journey</h3>
+            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+              Lihat ringkasan progres belajarmu, topik yang perlu diulang, dan rekomendasi materi relevan.
+            </p>
+          </div>
+          <div className="relative z-10 flex items-center gap-1.5 text-xs font-bold text-[#006c49] group-hover:gap-2.5 transition-all">
+            Lihat perjalanan belajar
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </div>
+        </Link>
+      </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════
           FEATURE CARDS — 4 module pathways
       ══════════════════════════════════════════════════════════════════════ */}
       <section>
