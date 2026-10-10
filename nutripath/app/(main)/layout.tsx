@@ -54,7 +54,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </main>
             ) : (
               // Normal pages: standard padding + max-width
-              <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+              <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-6">
                 <div className="max-w-7xl mx-auto">{children}</div>
               </main>
             )}
