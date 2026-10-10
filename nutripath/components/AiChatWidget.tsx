@@ -215,7 +215,7 @@ function useDraggable(initialPos: DragPos) {
     right: "auto",
   };
 
-  return { pos, style, movedRef, onPointerDown, onPointerMove, onPointerUp };
+  return { pos, style, movedRef, onPointerDown, onPointerMove, onPointerUp, setPos };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -242,9 +242,21 @@ export function AiChatWidget() {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<Status>("idle");
 
-  // Initialise position lazily so it uses window dimensions correctly
-  const [initPos] = useState<DragPos>(() => getInitialPos());
-  const { pos, style: bubbleStyle, movedRef, onPointerDown, onPointerMove, onPointerUp } = useDraggable(initPos);
+  // ── Hydration-safe mount ──────────────────────────────────
+  // Server selalu render { x: 0, y: 0 }.
+  // Setelah client mount, posisi di-update ke nilai nyata berbasis viewport.
+  const [mounted, setMounted] = useState(false);
+
+  // Posisi awal: server-safe ({ x:0, y:0 }), di-update setelah mount
+  const [initPos] = useState<DragPos>({ x: 0, y: 0 });
+  const { pos, style: bubbleStyle, movedRef, onPointerDown, onPointerMove, onPointerUp, setPos } = useDraggable(initPos);
+
+  // Setelah mount: pindah bubble ke posisi viewport yang benar
+  useEffect(() => {
+    setMounted(true);
+    setPos(getInitialPos());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -614,7 +626,9 @@ export function AiChatWidget() {
           "flex items-center justify-center",
           "transition-[background-color,opacity,transform] duration-200",
           "select-none cursor-grab active:cursor-grabbing",
-          open ? "opacity-90 scale-95" : "opacity-100 scale-100"
+          open ? "opacity-90 scale-95" : "opacity-100 scale-100",
+          // Sembunyikan sampai client mount agar tidak ada hydration mismatch
+          !mounted && "opacity-0 pointer-events-none"
         )}
       >
         {open ? (
