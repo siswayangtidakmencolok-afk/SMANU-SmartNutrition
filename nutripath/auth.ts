@@ -14,9 +14,24 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 
+// Detect whether we're in production (HTTPS) or local dev (HTTP)
+const isProduction = process.env.NODE_ENV === "production";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // Use JWT strategy — no database-backed sessions table required for login
   session: { strategy: "jwt" },
+
+  // Cookie config: secure=true on production (HTTPS), false on local HTTP
+  cookies: {
+    sessionToken: {
+      name: isProduction ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: isProduction,
+      },
+    },
+  },
 
   // Custom pages
   pages: {
