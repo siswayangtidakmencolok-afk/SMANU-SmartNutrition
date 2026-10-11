@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { computeLearningJourney, RecommendedTopic } from "@/lib/learning-journey-store";
 
 const categories = ["All", "Fundamentals", "Wellness", "Lifestyle", "Practical Skills", "Quick Recipes"];
 
@@ -68,6 +69,17 @@ const topics = [
 export default function NutritionKnowledgePage() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
+  const [recommendations, setRecommendations] = useState<RecommendedTopic[]>([]);
+
+  useEffect(() => {
+    try {
+      const journey = computeLearningJourney();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRecommendations(journey.topRecommendations.filter((r) => r.priority !== "low").slice(0, 3));
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const filtered = topics.filter((t) => {
     const matchCat = activeCategory === "All" || t.category === activeCategory;
@@ -86,6 +98,38 @@ export default function NutritionKnowledgePage() {
         title="Nutrition Knowledge"
         subtitle="Core scientific modules cataloged for query indexing and student study."
       />
+
+      {/* Recommended for you — only shown when journey data exists */}
+      {recommendations.length > 0 && (
+        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-bold text-emerald-900">✨ Direkomendasikan untuk Kamu</p>
+            <Link href="/learning-journey" className="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-0.5">
+              Lihat semua
+              <span className="material-symbols-outlined text-[13px]">chevron_right</span>
+            </Link>
+          </div>
+          <div className="flex flex-col gap-2">
+            {recommendations.map((rec) => {
+              const topic = topics.find((t) => t.id === rec.knowledgeId);
+              if (!topic) return null;
+              return (
+                <Link
+                  key={rec.knowledgeId}
+                  href={`/nutrition-knowledge/${rec.knowledgeId}`}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-white border border-emerald-100 hover:border-emerald-300 hover:shadow-sm transition-all group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-900 group-hover:text-emerald-700 transition-colors">{topic.title}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">{rec.reason}</p>
+                  </div>
+                  <span className="material-symbols-outlined text-emerald-400 text-[16px] shrink-0">arrow_forward</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Search + filter bar */}
       <div className="flex flex-col sm:flex-row gap-3">

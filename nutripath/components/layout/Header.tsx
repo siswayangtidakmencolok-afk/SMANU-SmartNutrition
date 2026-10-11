@@ -21,6 +21,9 @@ const pageTitles: Record<string, string> = {
   "/settings": "Settings",
   "/help": "Help & Responsible AI",
   "/search": "Search Knowledge Base",
+  "/food-challenge": "Food Challenge",
+  "/food-challenge/comparator": "Smart Food Comparator",
+  "/learning-journey": "Learning Journey",
 };
 
 // ── Notification types ─────────────────────────────────────────────────────
@@ -62,21 +65,48 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   // ── Notification state ────────────────────────────────────────────────
   const [notifOpen, setNotifOpen] = useState(false);
-  // Persisted read IDs in localStorage so they survive re-renders
-  const [readIds, setReadIds] = useState<Set<string>>(() => {
-    if (typeof window === "undefined") return new Set();
+
+  // clientData is null on server / before hydration, set on first client effect.
+  // This is the SSR-safe pattern: null = "not yet mounted", never read localStorage in render.
+  const [clientData, setClientData] = useState<{
+    readIds: Set<string>;
+    now: number;
+  } | null>(null);
+
+  useEffect(() => {
+    let initialReadIds = new Set<string>();
     try {
       const stored = localStorage.getItem("smanu_notif_read");
-      return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+      if (stored) initialReadIds = new Set(JSON.parse(stored) as string[]);
     } catch {
-      return new Set();
+      // ignore
     }
-  });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setClientData({ readIds: initialReadIds, now: Date.now() });
+  }, []);
+
+  // Helpers derived from clientData (safe to use in render — no ref access)
+  const mounted = clientData !== null;
+  const readIds = clientData?.readIds ?? new Set<string>();
+
+  function updateReadIds(updater: (prev: Set<string>) => Set<string>) {
+    setClientData((prev) => {
+      if (!prev) return prev;
+      const next = updater(prev.readIds);
+      try {
+        localStorage.setItem("smanu_notif_read", JSON.stringify([...next]));
+      } catch {
+        // ignore
+      }
+      return { ...prev, readIds: next };
+    });
+  }
 
   // Build notifications live from history context
   const notifications = useCallback((): AppNotification[] => {
     const notes: AppNotification[] = [];
-    const now = Date.now();
+    // Before mount, now=0 so relative times show sensibly after hydration
+    const now = clientData?.now ?? 0;
 
     // 1. Welcome — always present
     notes.push({
@@ -125,19 +155,14 @@ export function Header({ onMenuClick }: HeaderProps) {
     });
 
     return notes;
-  }, [sessions]);
+  }, [sessions, clientData?.now]);
 
   const allNotifications = notifications();
-  const unreadCount = allNotifications.filter((n) => !readIds.has(n.id)).length;
-
-  // Persist readIds to localStorage whenever it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem("smanu_notif_read", JSON.stringify([...readIds]));
-    } catch {
-      // ignore
-    }
-  }, [readIds]);
+  // Before mount: render 0 unread so server and client HTML match exactly.
+  // After mount: show real count computed from localStorage-hydrated readIds.
+  const unreadCount = mounted
+    ? allNotifications.filter((n) => !readIds.has(n.id)).length
+    : 0;
 
   // Close notification panel on outside click
   useEffect(() => {
@@ -158,7 +183,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   }, []);
 
   function markAllRead() {
-    setReadIds(new Set(allNotifications.map((n) => n.id)));
+    updateReadIds(() => new Set(allNotifications.map((n) => n.id)));
   }
 
   function toggleNotif() {
@@ -474,7 +499,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                           isUnread ? "bg-emerald-50/40" : ""
                         }`}
                         onClick={() => {
-                          setReadIds((prev) => new Set([...prev, n.id]));
+                          updateReadIds((prev) => new Set([...prev, n.id]));
                           if (n.href) router.push(n.href);
                           setNotifOpen(false);
                         }}
