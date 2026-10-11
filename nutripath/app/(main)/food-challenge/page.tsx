@@ -414,7 +414,7 @@ export default function FoodChallengePage() {
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-5 pb-12">
+    <div className="flex flex-col gap-5 pb-36 sm:pb-12">
 
       {/* ── Sub-header ──────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
@@ -481,6 +481,7 @@ export default function FoodChallengePage() {
           VIEW 1: SIMULATION — Tray + Catalog + Sticky Tracker
       ══════════════════════════════════════════════════════════════ */}
       {activeTab === "simulation" && (
+        <>
         <div className="flex flex-col lg:grid lg:grid-cols-12 gap-5">
 
           {/* Left 8 cols */}
@@ -506,7 +507,7 @@ export default function FoodChallengePage() {
               </div>
 
               <div className="bg-slate-50 rounded-2xl p-4 shadow-inner">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
                   {TRAY_SLOTS.map(slot => (
                     <TraySlot
                       key={slot.key}
@@ -564,7 +565,8 @@ export default function FoodChallengePage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Desktop: card grid */}
+              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredFoods.map(food => (
                   <FoodCatalogItem
                     key={food.id}
@@ -574,6 +576,58 @@ export default function FoodChallengePage() {
                     onToggle={() => handleToggleFood(food.id)}
                   />
                 ))}
+              </div>
+
+              {/* Mobile: compact row list */}
+              <div className="flex flex-col divide-y divide-slate-100 sm:hidden">
+                {filteredFoods.map(food => {
+                  const sel = selectedFoodIds.includes(food.id);
+                  const hasWarning =
+                    food.id === "teh-manis" ||
+                    food.id === "mie-goreng-instan" ||
+                    (food.carbsG !== null && food.fatG !== null && food.carbsG + food.fatG > 60);
+                  return (
+                    <div
+                      key={food.id}
+                      onClick={() => handleToggleFood(food.id)}
+                      className={`flex items-center gap-3 py-2.5 px-1 transition-colors cursor-pointer ${sel ? "bg-[#006c49]/5" : ""}`}
+                    >
+                      {/* Icon */}
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${sel ? "bg-[#006c49]/15" : "bg-slate-100"}`}>
+                        <span className={`material-symbols-outlined text-[20px] ${sel ? "text-[#006c49]" : "text-slate-400"}`}>
+                          {food.foodGroup === "carbs" ? "grain" :
+                           food.foodGroup === "protein" ? "egg" :
+                           food.foodGroup === "vegetable" ? "eco" :
+                           food.foodGroup === "fruit" ? "nutrition" :
+                           food.foodGroup === "beverage" ? "water_drop" :
+                           food.foodGroup === "dairy" ? "local_drink" : "restaurant"}
+                        </span>
+                      </div>
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-xs font-bold text-slate-900 truncate">{food.name.split("(")[0].trim()}</span>
+                          {hasWarning && (
+                            <span className="text-[9px] text-rose-500 font-semibold shrink-0">⚠ Perhatikan</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400 mt-0.5">
+                          <span>{food.calories !== null ? `${food.calories} kkal` : "—"}</span>
+                          {food.proteinG !== null && <><span>·</span><span>{food.proteinG}g protein</span></>}
+                        </div>
+                      </div>
+                      {/* Price + toggle */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[11px] font-bold text-slate-700">Rp {(food.price / 1000).toFixed(0)}rb</span>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                          sel ? "bg-[#006c49] text-white" : "bg-slate-200 text-slate-600"
+                        }`}>
+                          <span className="material-symbols-outlined text-[16px]">{sel ? "check" : "add"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -694,6 +748,44 @@ export default function FoodChallengePage() {
             </div>
           </div>
         </div>
+
+        {/* ── Mobile sticky bottom bar (sm:hidden) ──────────────────── */}
+        <div className="sm:hidden fixed bottom-16 inset-x-0 z-20 bg-white border-t border-slate-200 px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.06)]">
+          {/* Budget bar */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${overBudget ? "bg-rose-400" : "bg-[#006c49]"}`}
+                style={{ width: `${budgetPct}%` }}
+              />
+            </div>
+            <span className={`text-[10px] font-bold shrink-0 ${overBudget ? "text-rose-600" : "text-[#006c49]"}`}>
+              Rp {totalPrice.toLocaleString("id-ID")} / {activeScenario.rule.maxBudget.toLocaleString("id-ID")}
+            </span>
+          </div>
+          {/* Selected count + submit */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              {selectedFoodIds.length > 0 && (
+                <span className="text-[11px] text-slate-500 truncate">
+                  {selectedFoodIds.length} item · {totalCalories} kkal · {totalProtein.toFixed(0)}g prot
+                </span>
+              )}
+              {selectedFoodIds.length === 0 && (
+                <span className="text-[11px] text-slate-400">Pilih makanan dari daftar</span>
+              )}
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+              className="shrink-0 px-5 py-2.5 rounded-xl bg-[#006c49] text-white font-bold text-xs flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+              <span>Kirim</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </button>
+          </div>
+        </div>
+        </>
       )}
 
       {/* ══════════════════════════════════════════════════════════════
