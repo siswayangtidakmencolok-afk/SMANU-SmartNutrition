@@ -150,7 +150,10 @@ function useDraggable(initialPos: DragPos) {
   /** Clamp position so bubble stays fully inside viewport */
   function clamp(x: number, y: number): DragPos {
     const maxX = window.innerWidth - BUBBLE;
-    const maxY = window.innerHeight - BUBBLE;
+    // Reserve space above bottom nav on mobile
+    const isMobile = window.innerWidth < 1024;
+    const bottomReserve = isMobile ? 64 + 16 : 8; // bottom nav + safe area
+    const maxY = window.innerHeight - BUBBLE - bottomReserve;
     return {
       x: Math.max(0, Math.min(x, maxX)),
       y: Math.max(0, Math.min(y, maxY)),
@@ -204,8 +207,7 @@ function useDraggable(initialPos: DragPos) {
     }
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [setPos]);
 
   const style: React.CSSProperties = {
     left: pos.x,
@@ -225,10 +227,13 @@ function useDraggable(initialPos: DragPos) {
 
 function getInitialPos(): DragPos {
   if (typeof window === "undefined") return { x: 0, y: 0 };
-  // Place bubble 80px from bottom, 16px from right by default
+  // On mobile (< 1024px), keep above bottom nav (64px) + safe area (~16px) + extra gap
+  // On desktop, keep 80px from bottom
+  const isMobile = window.innerWidth < 1024;
+  const bottomOffset = isMobile ? 64 + 16 + 12 : 80; // bottomNav + safeArea + gap
   return {
     x: window.innerWidth - BUBBLE - 16,
-    y: window.innerHeight - BUBBLE - 80,
+    y: window.innerHeight - BUBBLE - bottomOffset,
   };
 }
 
@@ -241,6 +246,8 @@ export function AiChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<Status>("idle");
+  // Context from Nutrition Knowledge page (topic ID + title)
+  const [pageContext, setPageContext] = useState<{ topicId: string; topicTitle: string } | null>(null);
 
   // ── Hydration-safe mount ──────────────────────────────────
   // Server selalu render { x: 0, y: 0 }.
@@ -253,9 +260,33 @@ export function AiChatWidget() {
 
   // Setelah mount: pindah bubble ke posisi viewport yang benar
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     setPos(getInitialPos());
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for context events from Nutrition Knowledge pages
+  useEffect(() => {
+    function handleOpenChat(e: Event) {
+      const detail = (e as CustomEvent).detail as {
+        topicId?: string;
+        topicTitle?: string;
+        suggestedQuestion?: string;
+      };
+      // Open the widget
+      setOpen(true);
+      // Set page context
+      if (detail.topicId && detail.topicTitle) {
+        setPageContext({ topicId: detail.topicId, topicTitle: detail.topicTitle });
+      }
+      // Pre-fill suggested question if provided
+      if (detail.suggestedQuestion) {
+        setInput(detail.suggestedQuestion);
+      }
+    }
+    window.addEventListener("smanu:open-chat", handleOpenChat);
+    return () => window.removeEventListener("smanu:open-chat", handleOpenChat);
   }, []);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -309,13 +340,23 @@ export function AiChatWidget() {
     setStatus("loading");
 
     try {
+      // Build context-aware body: include Nutrition Knowledge topic context if available
+      const body: Record<string, unknown> = {
+        message: text,
+        history: historySnapshot,
+      };
+      if (pageContext) {
+        body.context = {
+          source: "nutrition-knowledge",
+          topicId: pageContext.topicId,
+          topicTitle: pageContext.topicTitle,
+        };
+      }
+
       const res = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          history: historySnapshot,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data: { reply?: string; error?: string } = await res.json();
@@ -338,7 +379,7 @@ export function AiChatWidget() {
       ]);
       setStatus("error");
     }
-  }, [input, messages, isLoading]);
+  }, [input, messages, isLoading, pageContext]);
 
   // Enter sends, Shift+Enter adds line break
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -357,6 +398,7 @@ export function AiChatWidget() {
   function clearHistory() {
     setMessages([]);
     setStatus("idle");
+    setPageContext(null);
   }
 
   // Toggle open — only if this was a click (not a drag)
@@ -447,7 +489,9 @@ export function AiChatWidget() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold leading-tight">SMANU AI Assistant</p>
             <p className="text-[11px] text-white/70 leading-tight">
-              Asisten edukasi nutrisi pelajar
+              {pageContext
+                ? `Konteks: ${pageContext.topicTitle.length > 30 ? pageContext.topicTitle.slice(0, 30) + "…" : pageContext.topicTitle}`
+                : "Asisten edukasi nutrisi pelajar"}
             </p>
           </div>
 
@@ -490,12 +534,32 @@ export function AiChatWidget() {
                   Halo! Aku SMANU AI Assistant.
                 </p>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed max-w-[240px] mx-auto">
-                  Tanya apa saja tentang nutrisi, pilihan makanan, atau kebiasaan makan sehat untuk pelajar.
+                  {pageContext
+                    ? `Kamu sedang membaca tentang "${pageContext.topicTitle}". Silakan tanya apa saja!`
+                    : "Tanya apa saja tentang nutrisi, pilihan makanan, atau kebiasaan makan sehat untuk pelajar."}
                 </p>
               </div>
-              {/* Starter chips */}
+              {/* Context badge when topic is active */}
+              {pageContext && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-medium">
+                  <span className="material-symbols-outlined text-[14px]">menu_book</span>
+                  {pageContext.topicTitle.length > 28 ? pageContext.topicTitle.slice(0, 28) + "…" : pageContext.topicTitle}
+                  <button onClick={() => setPageContext(null)} className="ml-1 hover:text-emerald-900 text-emerald-400">
+                    <span className="material-symbols-outlined text-[12px]">close</span>
+                  </button>
+                </div>
+              )}
+              {/* Starter chips — context-aware */}
               <div className="w-full max-w-[280px] flex flex-col gap-2">
-                {STARTERS.map((s) => (
+                {(pageContext
+                  ? [
+                      `Jelaskan "${pageContext.topicTitle}" dengan bahasa yang mudah dipahami`,
+                      `Apa saja tips praktis dari materi ${pageContext.topicTitle}?`,
+                      "Makanan apa yang cocok dengan materi ini untuk pelajar?",
+                      "Apa yang tidak boleh dilakukan berdasarkan materi ini?",
+                    ]
+                  : STARTERS
+                ).map((s) => (
                   <button
                     key={s}
                     onClick={() => {
