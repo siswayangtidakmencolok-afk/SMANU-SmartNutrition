@@ -7,6 +7,8 @@ import {
   SCENARIOS,
   FOOD_OPTIONS,
   scoreChallengeSelection,
+  searchFoodOptions,
+  FOOD_KB_LINKS,
   Scenario,
   FoodOption,
   ChallengeScore,
@@ -260,7 +262,7 @@ function FoodCatalogItem({
             </span>
             <button
               disabled={!canSelect}
-              onClick={(e) => { e.stopPropagation(); canSelect && onToggle(); }}
+              onClick={(e) => { e.stopPropagation(); if (canSelect) onToggle(); }}
               className={`text-[10px] px-2.5 py-1 rounded font-semibold transition-colors ${
                 canSelect
                   ? "bg-[#131b2e] text-white hover:bg-slate-700"
@@ -316,6 +318,7 @@ export default function FoodChallengePage() {
   const [scoreResult, setScoreResult] = useState<ChallengeScore | null>(null);
   const [saved, setSaved] = useState(false);
   const [foodFilter, setFoodFilter] = useState<FoodFilter>("all");
+  const [foodSearch, setFoodSearch] = useState("");
   const [priceAnim, setPriceAnim] = useState(false);
 
   // ── Derived ──────────────────────────────────────────────────────────
@@ -362,10 +365,11 @@ export default function FoodChallengePage() {
 
   const filledSlots = TRAY_SLOTS.filter(s => slotFoods[s.key]).length;
 
-  const filteredFoods = useMemo(() =>
-    foodFilter === "all" ? FOOD_OPTIONS : FOOD_OPTIONS.filter(f => f.foodGroup === foodFilter),
-    [foodFilter]
-  );
+  const filteredFoods = useMemo(() => {
+    const base = foodFilter === "all" ? FOOD_OPTIONS : FOOD_OPTIONS.filter(f => f.foodGroup === foodFilter);
+    if (!foodSearch.trim()) return base;
+    return searchFoodOptions(foodSearch).filter(f => foodFilter === "all" || f.foodGroup === foodFilter);
+  }, [foodFilter, foodSearch]);
 
   // ── Handlers ─────────────────────────────────────────────────────────
   function handleToggleFood(id: string) {
@@ -542,24 +546,45 @@ export default function FoodChallengePage() {
 
             {/* Food Catalog */}
             <div className="bg-white rounded-2xl shadow-sm p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Katalog Makanan Kantin Sekolah</h3>
-                  <p className="text-[10px] text-slate-400">Klik kartu makanan untuk menambah atau melepas dari baki</p>
+              <div className="flex flex-col gap-3 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Katalog Makanan Kantin Sekolah</h3>
+                    <p className="text-[10px] text-slate-400">Klik kartu makanan untuk menambah atau melepas dari baki</p>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium shrink-0">
+                    {filteredFoods.length} item ditampilkan
+                  </span>
                 </div>
-                {/* Filter pills */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+                {/* Search */}
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px] pointer-events-none">search</span>
+                  <input
+                    type="text"
+                    placeholder="Cari makanan…"
+                    value={foodSearch}
+                    onChange={e => setFoodSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#006c49]/30 focus:border-[#006c49] transition-all"
+                  />
+                  {foodSearch && (
+                    <button onClick={() => setFoodSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                  )}
+                </div>
+                {/* Filter pills — horizontal scroll, contained */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide" style={{ WebkitOverflowScrolling: "touch" }}>
                   {FILTER_OPTIONS.map(f => (
                     <button
                       key={f.id}
                       onClick={() => setFoodFilter(f.id)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap transition-colors ${
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap transition-colors shrink-0 ${
                         foodFilter === f.id
                           ? "bg-[#131b2e] text-white"
                           : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                       }`}
                     >
-                      {f.label} {f.id === "all" ? `(${FOOD_OPTIONS.length})` : `(${FOOD_OPTIONS.filter(x => x.foodGroup === f.id).length})`}
+                      {f.label} ({foodFilter === f.id && foodSearch ? filteredFoods.length : f.id === "all" ? FOOD_OPTIONS.length : FOOD_OPTIONS.filter(x => x.foodGroup === f.id).length})
                     </button>
                   ))}
                 </div>
@@ -629,6 +654,17 @@ export default function FoodChallengePage() {
                   );
                 })}
               </div>
+
+              {/* Empty state when search yields nothing */}
+              {filteredFoods.length === 0 && (
+                <div className="py-10 text-center">
+                  <span className="material-symbols-outlined text-[36px] text-slate-300 block mb-2">search_off</span>
+                  <p className="text-sm text-slate-500">Tidak ada makanan yang cocok.</p>
+                  <button onClick={() => { setFoodSearch(""); setFoodFilter("all"); }} className="mt-2 text-xs text-[#006c49] underline">
+                    Tampilkan semua
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -797,7 +833,7 @@ export default function FoodChallengePage() {
             <div className="bg-white rounded-2xl p-12 text-center shadow-sm">
               <span className="material-symbols-outlined text-[48px] text-slate-200 block mb-4">fact_check</span>
               <p className="text-sm font-semibold text-slate-700 mb-2">Belum ada evaluasi</p>
-              <p className="text-xs text-slate-400 mb-5">Susun pilihanmu di tab "Susun Piring" dan klik Kirim &amp; Evaluasi.</p>
+              <p className="text-xs text-slate-400 mb-5">Susun pilihanmu di tab &quot;Susun Piring&quot; dan klik Kirim &amp; Evaluasi.</p>
               <button
                 onClick={() => setActiveTab("simulation")}
                 className="px-5 py-2.5 rounded-xl bg-[#131b2e] text-white text-sm font-semibold hover:bg-slate-700 transition-colors"
@@ -935,22 +971,35 @@ export default function FoodChallengePage() {
                     </div>
                   )}
 
-                  {/* Related knowledge teaser */}
-                  {activeScenario.relatedKnowledgeIds.length > 0 && (
-                    <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#006c49] text-[20px]">auto_awesome</span>
-                        <span className="text-xs text-slate-700">Ingin memperdalam materi terkait skenario ini?</span>
+                  {/* Related knowledge teaser — from scenario + selected foods */}
+                  {(() => {
+                    const kbIds = new Set<string>([
+                      ...activeScenario.relatedKnowledgeIds,
+                      ...selectedFoodIds.flatMap(id => FOOD_KB_LINKS[id] ?? []),
+                    ]);
+                    const kbArr = [...kbIds].slice(0, 3);
+                    if (kbArr.length === 0) return null;
+                    return (
+                      <div className="pt-2 flex flex-col gap-3 border-t border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <span className="material-symbols-outlined text-[#006c49] text-[18px]">auto_awesome</span>
+                          <span className="text-xs font-semibold text-slate-700">Pelajari lebih lanjut di Pustaka Gizi</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {kbArr.map(id => (
+                            <Link
+                              key={id}
+                              href={`/nutrition-knowledge/${id}`}
+                              className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-[#006c49]/10 hover:text-[#006c49] text-slate-700 text-[11px] font-semibold transition-colors flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">menu_book</span>
+                              {id.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                            </Link>
+                          ))}
+                        </div>
                       </div>
-                      <Link
-                        href={`/nutrition-knowledge/${activeScenario.relatedKnowledgeIds[0]}`}
-                        className="px-4 py-2 rounded-xl bg-[#131b2e] text-white text-xs font-bold hover:bg-slate-700 transition-colors flex items-center gap-1.5 whitespace-nowrap"
-                      >
-                        Buka Pustaka Gizi
-                        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-                      </Link>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 <div className="lg:col-span-4 bg-white rounded-2xl shadow-sm p-5 flex flex-col justify-between">

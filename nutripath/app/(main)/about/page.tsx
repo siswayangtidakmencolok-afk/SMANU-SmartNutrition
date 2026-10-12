@@ -55,14 +55,14 @@ const OTHER_PROJECTS: {
   desc: string;
   tags: string[];
   url: string; // Isi dengan URL asli, atau biarkan "#" jika belum ada
-  status: "live" | "in-progress" | "coming-soon";
+  status: "live" | "in-progress" | "coming-soon" | "production";
 }[] = [
   {
     title: "Web Frieren The Journey",
     desc: "Website dedikasi saya untuk anime peak frieren dan disini semua hal tentang anime/manga frieren ada",
     tags: ["HTML, CSS, Boostrap, APIGateaway"],
     url: "https://siswayangtidakmencolok-afk.github.io/website-frieren/",
-    status: "live",
+    status: "production",
   },
   {
     title: "FoodsStreets",
@@ -235,11 +235,14 @@ export default function AboutPage() {
         {/* Profile card */}
         <Card>
           <div className="flex items-start gap-4">
-            {/* Avatar placeholder */}
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[--color-secondary-container] to-[--color-tertiary-fixed] flex items-center justify-center flex-shrink-0 shadow-sm">
-              {/* Ganti elemen di bawah dengan <Image> jika ada foto profil */}
-              <span className="text-2xl font-black text-[--color-on-secondary-container] select-none">F</span>
-            </div>
+            {/* Avatar — gradient with initials; replace with <Image> when photo is ready */}
+<div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0 shadow-sm">
+  <img
+    src="/images/developer/developer-profile.jpg"
+    alt="Foto Fhazwan Athar"
+    className="w-full h-full object-cover"
+  />
+</div>
             <div className="flex flex-col gap-1 min-w-0 flex-1">
               <h3 className="text-lg font-bold text-[--color-on-surface] leading-tight">
                 {DEVELOPER.displayName}
