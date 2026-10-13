@@ -272,24 +272,25 @@ export default function TopicDetailPage({
   const activeTabMeta = TABS.find((t) => t.id === activeTab)!;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       {/* ── Breadcrumb ─────────────────────────────────────────── */}
-      <nav className="flex items-center gap-2 text-xs text-[--color-on-surface-variant]">
+      <nav className="flex items-center gap-1.5 text-xs text-[--color-on-surface-variant] min-w-0 overflow-hidden">
         <Link
           href="/nutrition-knowledge"
-          className="hover:text-[--color-secondary] transition-colors flex items-center gap-1"
+          className="hover:text-[--color-secondary] transition-colors flex items-center gap-1 shrink-0"
         >
-          <span className="material-symbols-outlined text-[14px]">library_books</span>
-          Materi Nutrisi
+          <span className="material-symbols-outlined text-[13px]">library_books</span>
+          <span className="hidden sm:inline">Materi Nutrisi</span>
+          <span className="sm:hidden">Materi</span>
         </Link>
-        <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-        <span className="text-[--color-on-surface] font-medium truncate max-w-[200px] sm:max-w-none">
+        <span className="material-symbols-outlined text-[13px] shrink-0">chevron_right</span>
+        <span className="text-[--color-on-surface] font-medium truncate">
           {topic.title}
         </span>
       </nav>
 
       {/* ── Hero banner ────────────────────────────────────────── */}
-      <div className="relative rounded-2xl overflow-hidden h-40 sm:h-52">
+      <div className="relative rounded-xl sm:rounded-2xl overflow-hidden h-32 sm:h-48">
         {topic.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -306,39 +307,39 @@ export default function TopicDetailPage({
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
         {/* Hero content */}
-        <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
-          <div className="flex items-end gap-3">
+        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-5 text-white">
+          <div className="flex items-end gap-2 sm:gap-3">
             <div
               className={clsx(
-                "w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-lg flex-shrink-0",
+                "w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-lg sm:text-xl shadow-lg flex-shrink-0",
                 topic.accentColor
               )}
             >
               {topic.iconEmoji}
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="px-2 py-0.5 rounded-full bg-white/20 backdrop-blur text-[10px] font-semibold uppercase tracking-wide">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                <span className="px-1.5 py-0.5 rounded-full bg-white/20 backdrop-blur text-[9px] font-semibold uppercase tracking-wide">
                   {topic.category}
                 </span>
-                <span className="text-[10px] text-white/70">{topic.readTime}</span>
+                <span className="text-[9px] text-white/70">{topic.readTime}</span>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold leading-tight">{topic.title}</h1>
+              <h1 className="text-base sm:text-xl font-bold leading-tight">{topic.title}</h1>
             </div>
           </div>
         </div>
       </div>
 
       {/* ── Description + tags row ─────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-start gap-3 justify-between">
-        <p className="text-sm text-[--color-on-surface-variant] leading-relaxed max-w-2xl">
+      <div className="flex flex-col gap-2">
+        <p className="text-xs sm:text-sm text-[--color-on-surface-variant] leading-relaxed">
           {topic.summary}
         </p>
-        <div className="flex flex-wrap gap-1.5 sm:flex-shrink-0">
+        <div className="flex flex-wrap gap-1">
           {topic.tags.map((tag) => (
             <span
               key={tag}
-              className="px-2.5 py-1 rounded-full bg-[--color-secondary]/10 text-[--color-secondary] text-xs font-medium"
+              className="px-2 py-0.5 rounded-full bg-[--color-secondary]/10 text-[--color-secondary] text-[10px] sm:text-xs font-medium"
             >
               {tag}
             </span>
@@ -358,7 +359,7 @@ export default function TopicDetailPage({
           )}
         >
           <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">psychology</span>
+            <span className="material-symbols-outlined text-[13px]">psychology</span>
             Mode AI
           </span>
         </button>
@@ -372,7 +373,7 @@ export default function TopicDetailPage({
           )}
         >
           <span className="flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">article</span>
+            <span className="material-symbols-outlined text-[13px]">article</span>
             Baca Lengkap
           </span>
         </button>
@@ -406,21 +407,21 @@ export default function TopicDetailPage({
           ) : (
             /* ── TAB / AI MODE ─────────────────────────────────── */
             <>
-              {/* Tab bar */}
-              <div className="flex overflow-x-auto gap-1 bg-[--color-surface-container-lowest] rounded-xl p-1 border border-[--color-outline-variant] mb-4 scrollbar-hide">
+              {/* Tab bar — icon only on xs, icon+label on sm+ */}
+              <div className="flex overflow-x-auto gap-1 bg-[--color-surface-container-lowest] rounded-xl p-1 border border-[--color-outline-variant] mb-3 scrollbar-hide">
                 {TABS.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id)}
                     className={clsx(
-                      "flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap flex-shrink-0",
+                      "flex items-center gap-1 px-2 sm:px-3 py-2 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap flex-shrink-0",
                       activeTab === tab.id
                         ? "bg-[--color-secondary] text-white shadow-sm"
                         : "text-[--color-on-surface-variant] hover:bg-[--color-surface-container-high] hover:text-[--color-on-surface]"
                     )}
                   >
-                    <span className="material-symbols-outlined text-[15px]">{tab.icon}</span>
-                    {tab.label}
+                    <span className="material-symbols-outlined text-[14px]">{tab.icon}</span>
+                    <span className="hidden sm:inline">{tab.label}</span>
                     {contentCache[tab.id] && activeTab !== tab.id && (
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
                     )}

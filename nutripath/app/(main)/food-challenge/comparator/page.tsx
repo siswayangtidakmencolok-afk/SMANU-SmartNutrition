@@ -68,20 +68,20 @@ function ComparisonTable({ result }: { result: ComparisonResult }) {
   ];
 
   return (
-    <div className="rounded-2xl border border-slate-200 overflow-hidden">
+    <div className="rounded-2xl border border-slate-200 overflow-hidden overflow-x-auto">
       {/* Column headers */}
-      <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-200">
-        <div className="p-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Aspek</div>
-        <div className="p-3 text-sm font-bold text-emerald-800 border-l border-slate-200 truncate">{foodA.name}</div>
-        <div className="p-3 text-sm font-bold text-blue-800 border-l border-slate-200 truncate">{foodB.name}</div>
+      <div className="grid grid-cols-3 bg-slate-50 border-b border-slate-200 min-w-0">
+        <div className="p-2.5 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Aspek</div>
+        <div className="p-2.5 text-xs font-bold text-emerald-800 border-l border-slate-200 truncate">{foodA.name}</div>
+        <div className="p-2.5 text-xs font-bold text-blue-800 border-l border-slate-200 truncate">{foodB.name}</div>
       </div>
       {rows.map((row, i) => (
         <div key={i} className={`grid grid-cols-3 border-b border-slate-100 last:border-0 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`}>
-          <div className="p-3 text-xs font-medium text-slate-500">{row.label}</div>
-          <div className="p-3 text-xs text-slate-800 border-l border-slate-100">
+          <div className="p-2.5 text-[10px] font-medium text-slate-500">{row.label}</div>
+          <div className="p-2.5 text-[11px] text-slate-800 border-l border-slate-100 break-words">
             {row.a ?? <NullNote />}
           </div>
-          <div className="p-3 text-xs text-slate-800 border-l border-slate-100">
+          <div className="p-2.5 text-[11px] text-slate-800 border-l border-slate-100 break-words">
             {row.b ?? <NullNote />}
           </div>
         </div>

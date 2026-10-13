@@ -99,30 +99,29 @@ function ScenarioCard({
   return (
     <button
       onClick={onSelect}
-      className={`group w-full text-left p-4 rounded-xl shadow-sm flex flex-col justify-between transition-all duration-200 ${
+      className={`group w-full text-left p-3 rounded-xl shadow-sm flex flex-col gap-2 transition-all duration-200 ${
         isActive
           ? "ring-2 ring-[#006c49] bg-gradient-to-b from-[#006c49]/5 to-transparent"
           : "bg-white hover:shadow-md border border-slate-100"
       }`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isActive ? "bg-[#6cf8bb] text-[#002113]" : "bg-slate-100 text-slate-500"}`}>
-          <span className="material-symbols-outlined text-[20px]">{icon}</span>
+      <div className="flex items-center justify-between">
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isActive ? "bg-[#6cf8bb] text-[#002113]" : "bg-slate-100 text-slate-500"}`}>
+          <span className="material-symbols-outlined text-[16px]">{icon}</span>
         </div>
         {isActive ? (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#006c49] text-white">Sedang Aktif</span>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#006c49] text-white whitespace-nowrap">Aktif</span>
         ) : (
-          <span className="text-[10px] text-slate-400 font-medium">{scenario.emoji}</span>
+          <span className="text-[11px]">{scenario.emoji}</span>
         )}
       </div>
-      <h3 className={`text-xs font-bold leading-tight group-hover:text-[#006c49] transition-colors ${isActive ? "text-[#006c49]" : "text-slate-900"}`}>
+      <h3 className={`text-[11px] font-bold leading-tight group-hover:text-[#006c49] transition-colors ${isActive ? "text-[#006c49]" : "text-slate-900"}`}>
         {scenario.title}
       </h3>
-      <p className="text-[10px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">{scenario.desc}</p>
-      <div className="mt-3 pt-3 flex items-center justify-between border-t border-slate-100">
-        <span className="text-[10px] text-slate-400 font-medium">Pagu</span>
-        <span className={`text-xs font-bold ${isActive ? "text-[#006c49]" : "text-slate-700"}`}>
-          Rp {scenario.rule.maxBudget.toLocaleString("id-ID")}
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] text-slate-400 font-medium">Pagu</span>
+        <span className={`text-[10px] font-bold ${isActive ? "text-[#006c49]" : "text-slate-700"}`}>
+          Rp {(scenario.rule.maxBudget / 1000).toFixed(0)}rb
         </span>
       </div>
     </button>
@@ -284,7 +283,7 @@ function ScoreCircle({ score }: { score: number }) {
   const circ = 2 * Math.PI * r;
   const offset = circ - (score / 100) * circ;
   return (
-    <div className="relative w-40 h-40 flex items-center justify-center">
+    <div className="relative w-28 h-28 sm:w-36 sm:h-36 flex items-center justify-center">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
         <circle cx="60" cy="60" r={r} fill="transparent" stroke="#e2e8f0" strokeWidth="10" />
         <circle
@@ -418,58 +417,56 @@ export default function FoodChallengePage() {
 
   // ── Render ────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-5 pb-36 sm:pb-12">
+    <div className="flex flex-col gap-4 pb-40 sm:pb-10">
 
       {/* ── Sub-header ──────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap text-slate-500 mb-1">
-            <span className="material-symbols-outlined text-[15px]">school</span>
-            <span className="text-[10px] font-bold uppercase tracking-wider">Simulasi Edukatif Kantin &amp; Sekolah</span>
-            <span className="text-slate-300">•</span>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#6cf8bb] text-[#002113]">
-              Konteks: Rp {activeScenario.rule.maxBudget.toLocaleString("id-ID")} / Skenario
-            </span>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap text-slate-500 mb-1">
+              <span className="material-symbols-outlined text-[13px]">school</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider">Simulasi Edukatif</span>
+              <span className="text-slate-300">·</span>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#6cf8bb] text-[#002113]">
+                Pagu Rp {activeScenario.rule.maxBudget.toLocaleString("id-ID")}
+              </span>
+            </div>
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight leading-tight">Food Challenge</h1>
+            <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+              Simulasi pilihan makanan harian. Estimasi gizi berbasis kurikulum edukasi.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Food Challenge</h1>
-          <p className="text-sm text-slate-500 mt-0.5 max-w-xl">
-            Latih keputusan makananmu lewat simulasi skenario harian. Estimasi gizi dan harga berbasis kurikulum edukasi.
-          </p>
-        </div>
-
-        {/* Tab switcher */}
-        <div className="inline-flex p-1 bg-slate-100 rounded-xl shadow-sm self-start sm:self-auto shrink-0">
-          {([
-            { id: "simulation" as Tab, icon: "restaurant_menu", label: "Susun Piring" },
-            { id: "evaluation"  as Tab, icon: "fact_check",      label: "Hasil Evaluasi" },
-            { id: "comparator"  as Tab, icon: "compare_arrows",  label: "Komparator" },
-          ] as const).map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === t.id
-                  ? "bg-[#131b2e] text-white shadow-sm"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-white/70"
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
-              <span className="hidden sm:inline">{t.label}</span>
-            </button>
-          ))}
+          {/* Tab switcher — icon-only on mobile, with label on sm+ */}
+          <div className="inline-flex p-1 bg-slate-100 rounded-xl shadow-sm shrink-0">
+            {([
+              { id: "simulation" as Tab, icon: "restaurant_menu", label: "Susun Piring" },
+              { id: "evaluation"  as Tab, icon: "fact_check",      label: "Evaluasi" },
+              { id: "comparator"  as Tab, icon: "compare_arrows",  label: "Komparator" },
+            ] as const).map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`flex items-center gap-1 px-2.5 py-2 rounded-lg text-[11px] font-semibold transition-all ${
+                  activeTab === t.id
+                    ? "bg-[#131b2e] text-white shadow-sm"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/70"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">{t.icon}</span>
+                <span className="hidden sm:inline">{t.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ── Scenario deck (always visible) ──────────────────────────── */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#006c49] text-[18px]">explore</span>
-            <h2 className="text-sm font-bold text-slate-900">Pilih Skenario Aktivitas</h2>
-          </div>
-          <span className="text-[10px] text-slate-400 font-medium hidden sm:block">Pilih situasi untuk menentukan alokasi nutrisi &amp; budget</span>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="material-symbols-outlined text-[#006c49] text-[16px]">explore</span>
+          <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Pilih Skenario</h2>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {SCENARIOS.map(s => (
             <ScenarioCard
               key={s.id}
@@ -510,8 +507,8 @@ export default function FoodChallengePage() {
                 </span>
               </div>
 
-              <div className="bg-slate-50 rounded-2xl p-4 shadow-inner">
-                <div className="grid grid-cols-4 gap-2 sm:gap-3">
+              <div className="bg-slate-50 rounded-2xl p-3 sm:p-4 shadow-inner">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {TRAY_SLOTS.map(slot => (
                     <TraySlot
                       key={slot.key}
@@ -847,9 +844,9 @@ export default function FoodChallengePage() {
               <div className="bg-white rounded-2xl shadow-sm p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                   {/* Score circle */}
-                  <div className="lg:col-span-4 flex flex-col items-center text-center p-5 bg-slate-50 rounded-2xl">
+                  <div className="lg:col-span-4 flex flex-col items-center text-center p-4 bg-slate-50 rounded-2xl">
                     <ScoreCircle score={scoreResult.score} />
-                    <h3 className={`text-base font-bold mt-3 ${scoreColor(scoreResult.score)}`}>
+                    <h3 className={`text-sm font-bold mt-2 ${scoreColor(scoreResult.score)}`}>
                       {scoreLabel(scoreResult.score)}
                     </h3>
                     <p className="text-xs text-slate-400 mt-1">
