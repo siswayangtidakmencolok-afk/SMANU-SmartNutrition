@@ -120,15 +120,37 @@
   }
 
   /* Prevent Material Symbols fallback text from overflowing on mobile
-     when the Google Fonts CDN is slow or blocked */
+     when the Google Fonts CDN is slow or blocked.
+     
+     When the variable icon font has NOT loaded yet, the browser renders the
+     text content (e.g. "home") using the system fallback font. We constrain
+     the element size so fallback text is clipped and does not break the layout.
+     Once the icon font loads via font-display:swap the real glyph appears. */
   .material-symbols-outlined {
-    overflow: hidden;
+    font-family: "Material Symbols Outlined", sans-serif;
+    font-weight: normal;
+    font-style: normal;
+    font-size: inherit;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    line-height: 1;
     white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
     flex-shrink: 0;
+    /* Clip any fallback text so it stays within the icon bounding box */
+    overflow: hidden;
+    /* Fixed size so fallback text (could be long word) doesn't expand the container */
+    min-width: 1em;
+    max-width: 1em;
+    min-height: 1em;
+    max-height: 1em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "liga";
   }
 
   /* Hide scrollbar for sidebar */

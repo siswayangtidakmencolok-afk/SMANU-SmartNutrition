@@ -84,7 +84,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center justify-center gap-0.5 transition-colors ${
+                  className={`relative flex flex-col items-center justify-center gap-0.5 overflow-hidden transition-colors ${
                     isActive
                       ? "text-[#006c49]"
                       : "text-slate-400 hover:text-slate-600"
