@@ -139,7 +139,7 @@ async function main() {
   // Init Gemini
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
+    model: "gemini-flash-lite-latest",
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: 512,
@@ -285,7 +285,7 @@ async function main() {
   const outFile = path.join(outDir, `baseline_${timestamp}.json`);
   const summary = {
     run_at:          new Date().toISOString(),
-    model:           "gemini-2.0-flash",
+    model:           "gemini-flash-lite-latest",
     dataset_file:    datasetArg,
     samples_total:   results.length,
     samples_evaluated: totalEvaluated,

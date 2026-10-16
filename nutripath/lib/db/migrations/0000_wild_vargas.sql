@@ -78,5 +78,5 @@ CREATE TABLE "verification_tokens" (
 );
 --> statement-breakpoint
 ALTER TABLE "food_scan_logs" ADD CONSTRAINT "food_scan_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-"id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;ALTER TABLE "food_scan_logs" ADD CONSTRAINT "food_scan_logs_recognized_food_id_food_items_id_fk" FOREIGN KEY ("recognized_food_id") REFERENCES "public"."food_items"(
+ALTER TABLE "food_scan_logs" ADD CONSTRAINT "food_scan_logs_recognized_food_id_food_items_id_fk" FOREIGN KEY ("recognized_food_id") REFERENCES "public"."food_items"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;

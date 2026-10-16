@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       estimatedProteinG:   nutrition?.proteinG   ?? null,
       estimatedFatG:       nutrition?.fatG       ?? null,
       estimatedCarbG:      nutrition?.carbG      ?? null,
-      modelUsed:           modelUsed?.slice(0, 100)      ?? "gemini-2.0-flash",
+      modelUsed:           modelUsed?.slice(0, 100)      ?? "gemini-flash-lite-latest",
       confidenceNote:      confidenceNote?.slice(0, 50)  ?? null,
       dataSourceUsed:      dataSourceUsed                 ?? null,
       assumptions:         assumptions?.slice(0, 1000)   ?? null,

@@ -123,15 +123,18 @@ export async function POST(req: NextRequest) {
   }
 
   // 4. Call Gemini Vision
+  // Model: gemini-flash-lite-latest — confirmed vision-capable with AQ. API keys
+  // NOTE: Do NOT set responseMimeType:"application/json" for vision requests —
+  //       it conflicts with inline_data parts in some SDK versions.
   let rawJson: string;
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemini-flash-lite-latest",
       generationConfig: {
         temperature: 0.2,
         maxOutputTokens: 512,
-        responseMimeType: "application/json",
+        // responseMimeType intentionally omitted for vision requests
       },
       safetySettings: [
         { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -146,8 +149,10 @@ export async function POST(req: NextRequest) {
     ]);
 
     rawJson = result.response.text().trim();
+    if (!rawJson) throw new Error("Empty response from model");
   } catch (err) {
-    console.error("[food-scanner] Gemini error:", err instanceof Error ? err.message : String(err));
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[food-scanner] Gemini error:", msg);
     return Response.json(
       { error: "Analisis gambar gagal. Coba lagi atau pilih makanan secara manual." },
       { status: 502 }

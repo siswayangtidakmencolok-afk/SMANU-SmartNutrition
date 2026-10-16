@@ -104,7 +104,8 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
   const [saving, setSaving]               = useState(false);
   const [savedId, setSavedId]             = useState<string>("");
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef   = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // ── Analysis ────────────────────────────────────────────────────────────────
 
@@ -240,7 +241,7 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
           portionG:           result.portionG,
           portionLabel:       result.portionLabel,
           confidenceNote:     selectedCandidate.confidence,
-          modelUsed:          "gemini-2.0-flash",
+          modelUsed:          "gemini-flash-lite-latest",
         }),
       });
       const json = await res.json() as { id?: string; error?: string };
@@ -268,6 +269,7 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
     setError("");
     setSavedId("");
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (cameraInputRef.current) cameraInputRef.current.value = "";
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -312,8 +314,9 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
           {/* ── STEP: idle ─────────────────────────────────────────────── */}
           {step === "idle" && (
             <div className="flex flex-col gap-4">
+              {/* Drop zone — click to open gallery picker */}
               <div
-                className="border-2 border-dashed border-[--color-outline-variant] rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer hover:border-[#006c49] hover:bg-emerald-50/30 transition-all group"
+                className="border-2 border-dashed border-[--color-outline-variant] rounded-xl p-6 flex flex-col items-center gap-3 cursor-pointer hover:border-[#006c49] hover:bg-emerald-50/30 transition-all group"
                 onClick={() => fileInputRef.current?.click()}
                 onDrop={handleDrop}
                 onDragOver={(e) => e.preventDefault()}
@@ -324,21 +327,44 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
                 <div className="text-center">
                   <p className="text-sm font-semibold text-slate-700">Unggah foto makanan</p>
                   <p className="text-xs text-slate-400 mt-0.5">JPEG, PNG, WebP · Maks. 4 MB</p>
-                  <p className="text-xs text-slate-400">atau seret & lepas di sini</p>
+                  <p className="text-xs text-slate-400 hidden sm:block">atau seret &amp; lepas di sini</p>
                 </div>
+              </div>
+
+              {/* Two action buttons — gallery + camera */}
+              <div className="grid grid-cols-2 gap-2">
                 <button
-                  className="mt-1 px-4 py-2 rounded-lg bg-[#006c49] text-white text-xs font-semibold hover:bg-[#005a3c] transition-colors flex items-center gap-1.5"
-                  onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                  type="button"
+                  className="py-2.5 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  onClick={() => fileInputRef.current?.click()}
                 >
-                  <span className="material-symbols-outlined text-[15px]">photo_camera</span>
-                  Pilih Foto
+                  <span className="material-symbols-outlined text-[16px] text-slate-500">photo_library</span>
+                  Pilih dari Galeri
+                </button>
+                <button
+                  type="button"
+                  className="py-2.5 px-3 rounded-xl bg-[#006c49] hover:bg-[#005a3c] text-white text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  <span className="material-symbols-outlined text-[16px]">photo_camera</span>
+                  Buka Kamera
                 </button>
               </div>
 
+              {/* Hidden file inputs */}
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleFileInputChange}
+              />
+              {/* capture="environment" = rear camera on mobile; falls back to file picker on desktop */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
                 className="hidden"
                 onChange={handleFileInputChange}
               />
