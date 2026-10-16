@@ -33,21 +33,34 @@ export default function LoginPage() {
         redirect: false,
       });
 
+      // Auth.js v5 beta: result.ok can be true even when there's an error
+      // (HTTP 200 with error param in redirect URL). Always check error first.
       if (result?.error) {
         // "CredentialsSignin" = wrong email/password (authorize returned null)
-        // Anything else = server/DB error (authorize threw an error)
-        if (result.error === "CredentialsSignin") {
+        // "DatabaseError"     = DB unreachable (authorize threw DatabaseError)
+        if (
+          result.error === "CredentialsSignin" ||
+          result.error === "credentials"
+        ) {
           setError("Email/username atau password salah. Coba lagi.");
-        } else if (result.error.includes("DatabaseError") || result.error.includes("database") || result.error.includes("connect")) {
+        } else if (
+          result.error.toLowerCase().includes("database") ||
+          result.error.toLowerCase().includes("connect")
+        ) {
           setError("Tidak dapat terhubung ke database. Periksa koneksi internet kamu dan coba lagi dalam beberapa saat.");
         } else {
-          setError("Server tidak dapat dihubungi. Periksa koneksi internet kamu, lalu coba lagi.");
+          setError("Server tidak dapat dihubungi. Coba lagi.");
         }
-      } else if (result?.ok) {
+      } else if (result?.ok && result?.url) {
+        // Successful login — url is the post-login redirect target
+        // Do NOT call router.refresh() — it triggers a full page reload in Next.js 16.
+        // router.push alone is enough; JWT cookie is already set.
         router.push("/");
-        router.refresh();
+      } else if (result?.ok) {
+        // ok=true but no url — treat as success, push to home
+        router.push("/");
       } else {
-        setError("Terjadi kesalahan. Coba lagi.");
+        setError("Terjadi kesalahan saat masuk. Coba lagi.");
       }
     } catch {
       setError("Tidak dapat terhubung ke server. Coba lagi.");
