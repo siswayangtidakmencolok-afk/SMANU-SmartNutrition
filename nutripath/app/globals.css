@@ -119,13 +119,15 @@
     color: var(--color-on-surface);
   }
 
-  /* Prevent Material Symbols fallback text from overflowing on mobile
-     when the Google Fonts CDN is slow or blocked.
+  /* Material Symbols Outlined — correct rendering properties.
      
-     When the variable icon font has NOT loaded yet, the browser renders the
-     text content (e.g. "home") using the system fallback font. We constrain
-     the element size so fallback text is clipped and does not break the layout.
-     Once the icon font loads via font-display:swap the real glyph appears. */
+     font-display:block (set in the CDN URL) means the browser shows an
+     invisible placeholder while the font loads, then swaps to the glyph.
+     No fallback text ("home", "directions_run", etc.) will ever be visible.
+     
+     We keep overflow:hidden + fixed em sizing so that if the font is somehow
+     never loaded (e.g. CDN permanently blocked), the element stays the size
+     of a single character rather than expanding the layout. */
   .material-symbols-outlined {
     font-family: "Material Symbols Outlined", sans-serif;
     font-weight: normal;
@@ -141,16 +143,17 @@
     word-wrap: normal;
     direction: ltr;
     flex-shrink: 0;
-    /* Clip any fallback text so it stays within the icon bounding box */
+    /* Keep element at exactly 1em × 1em so layout never shifts */
+    width: 1em;
+    height: 1em;
     overflow: hidden;
-    /* Fixed size so fallback text (could be long word) doesn't expand the container */
-    min-width: 1em;
-    max-width: 1em;
-    min-height: 1em;
-    max-height: 1em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Required for ligature-based icon names to render as glyphs */
     font-feature-settings: "liga";
+    -webkit-font-feature-settings: "liga";
+    /* Prevent text selection of the icon name string */
+    user-select: none;
   }
 
   /* Hide scrollbar for sidebar */

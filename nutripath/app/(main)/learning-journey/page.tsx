@@ -294,7 +294,7 @@ export default function LearningJourneyPage() {
 
         <div className="relative z-10 flex flex-col lg:flex-row items-stretch">
           {/* Left content */}
-          <div className="flex-1 p-5 sm:p-7 flex flex-col justify-between gap-5">
+          <div className="flex-1 p-5 sm:p-6 flex flex-col justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#6cf8bb]/20 text-[#6cf8bb] text-[11px] font-bold tracking-wide uppercase mb-3">
                 <span className="material-symbols-outlined text-[14px]">school</span>
@@ -308,7 +308,7 @@ export default function LearningJourneyPage() {
               </p>
             </div>
             {/* Motivational pill */}
-            <div className="flex items-center gap-3 p-3 bg-white/5 backdrop-blur-md rounded-xl border border-white/10">
+            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
               <div className="w-8 h-8 rounded-lg bg-[#006c49]/40 flex items-center justify-center shrink-0">
                 <span className="material-symbols-outlined text-[#6cf8bb] text-[18px]">eco</span>
               </div>
@@ -318,12 +318,12 @@ export default function LearningJourneyPage() {
             </div>
           </div>
 
-          {/* Right status card */}
-          <div className="lg:w-72 p-5 sm:p-7 lg:border-l border-white/10 flex items-center">
-            <div className="w-full bg-white/8 backdrop-blur-md rounded-xl p-4 border border-white/10 flex flex-col gap-3">
+          {/* Right status card — shown below on mobile, beside on lg */}
+          <div className="lg:w-64 xl:w-72 p-5 sm:p-6 border-t border-white/10 lg:border-t-0 lg:border-l flex items-center">
+            <div className="w-full bg-white/[0.08] rounded-xl p-4 border border-white/10 flex flex-col gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#6cf8bb]/20 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[#6cf8bb] text-[20px]">insights</span>
+                <div className="w-9 h-9 rounded-full bg-[#6cf8bb]/20 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[#6cf8bb] text-[18px]">insights</span>
                 </div>
                 <div className="min-w-0">
                   <p className="text-[10px] text-[#bec6e0] uppercase tracking-wider font-semibold">Status Siswa</p>
@@ -348,11 +348,11 @@ export default function LearningJourneyPage() {
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-[#bec6e0] flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-[#6cf8bb]">check_circle</span>
+                    <span className="text-[#bec6e0] flex items-center gap-1 min-w-0 truncate">
+                      <span className="material-symbols-outlined text-[14px] text-[#6cf8bb] shrink-0">check_circle</span>
                       {summary.totalActivities} aktivitas selesai
                     </span>
-                    <span className="bg-[#6cf8bb]/20 text-[#6cf8bb] px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                    <span className="bg-[#6cf8bb]/20 text-[#6cf8bb] px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ml-2">
                       {isGuest ? "Tamu" : "Aktif"}
                     </span>
                   </div>
@@ -419,17 +419,17 @@ export default function LearningJourneyPage() {
             className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between gap-3 hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between gap-2">
-              <div className="flex flex-col min-w-0">
-                <span className="text-[11px] font-medium text-slate-500 mb-1">{card.label}</span>
-                <span className={`font-bold text-slate-900 leading-tight ${card.isText ? "text-sm sm:text-base truncate" : "text-2xl"}`}>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-[11px] font-medium text-slate-500 mb-1 leading-tight">{card.label}</span>
+                <span className={`font-bold text-slate-900 leading-tight ${card.isText ? "text-sm sm:text-sm line-clamp-2" : "text-2xl"}`}>
                   {card.value}
                 </span>
               </div>
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${card.iconBg}`}>
-                <span className="material-symbols-outlined text-[22px]">{card.icon}</span>
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${card.iconBg}`}>
+                <span className="material-symbols-outlined text-[20px] sm:text-[22px]">{card.icon}</span>
               </div>
             </div>
-            <p className="text-[10px] text-slate-500">{card.sub}</p>
+            <p className="text-[10px] text-slate-500 leading-snug">{card.sub}</p>
           </div>
         ))}
       </div>
@@ -558,19 +558,19 @@ export default function LearningJourneyPage() {
             {/* ACTIVITY TIMELINE */}
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
                     <span className="material-symbols-outlined text-[18px] text-slate-600">history</span>
                   </div>
-                  <h2 className="text-sm font-bold text-slate-900">Riwayat Aktivitas Belajar</h2>
+                  <h2 className="text-sm font-bold text-slate-900 truncate">Riwayat Aktivitas Belajar</h2>
                 </div>
-                {/* Filter tabs */}
-                <div className="inline-flex p-1 bg-slate-100 rounded-lg gap-1 self-start sm:self-auto">
+                {/* Filter tabs — horizontally scrollable on mobile */}
+                <div className="flex overflow-x-auto p-1 bg-slate-100 rounded-lg gap-1 self-start sm:self-auto no-scrollbar">
                   {(["all", "quest", "challenge"] as const).map((f) => (
                     <button
                       key={f}
                       onClick={() => setTimelineFilter(f)}
-                      className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-colors ${
+                      className={`px-3 py-1 rounded-md text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0 ${
                         timelineFilter === f
                           ? "bg-white text-slate-900 shadow-sm"
                           : "text-slate-500 hover:text-slate-800"
@@ -594,14 +594,14 @@ export default function LearningJourneyPage() {
                       key={i}
                       className="flex items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${item.iconBg}`}>
-                          <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.iconBg}`}>
+                          <span className="material-symbols-outlined text-[20px]">{item.icon}</span>
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-semibold text-slate-800 truncate max-w-[160px] sm:max-w-none">{item.title}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                            <span className="text-xs font-semibold text-slate-800 truncate">{item.title}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
                               item.type === "quest"
                                 ? "bg-cyan-100 text-cyan-700"
                                 : "bg-emerald-100 text-emerald-700"
