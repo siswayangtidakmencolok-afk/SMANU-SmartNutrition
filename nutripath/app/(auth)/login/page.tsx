@@ -31,38 +31,35 @@ export default function LoginPage() {
         identifier: identifier.trim().toLowerCase(),
         password,
         redirect: false,
+        // Explicit callbackUrl ensures result.url always points to home,
+        // regardless of what window.location.href is at call time.
+        callbackUrl: "/",
       });
 
-      // Auth.js v5 beta: result.ok can be true even when there's an error
-      // (HTTP 200 with error param in redirect URL). Always check error first.
+      // Auth.js v5 beta: check error BEFORE ok — ok can be true even when
+      // credentials are wrong (HTTP 200 response but error param in url).
       if (result?.error) {
-        // "CredentialsSignin" = wrong email/password (authorize returned null)
-        // "DatabaseError"     = DB unreachable (authorize threw DatabaseError)
         if (
           result.error === "CredentialsSignin" ||
-          result.error === "credentials"
+          result.code === "credentials"
         ) {
           setError("Email/username atau password salah. Coba lagi.");
         } else if (
           result.error.toLowerCase().includes("database") ||
           result.error.toLowerCase().includes("connect")
         ) {
-          setError("Tidak dapat terhubung ke database. Periksa koneksi internet kamu dan coba lagi dalam beberapa saat.");
+          setError("Tidak dapat terhubung ke database. Periksa koneksi internet dan coba lagi.");
         } else {
           setError("Server tidak dapat dihubungi. Coba lagi.");
         }
-      } else if (result?.ok && result?.url) {
-        // Successful login — url is the post-login redirect target
-        // Do NOT call router.refresh() — it triggers a full page reload in Next.js 16.
-        // router.push alone is enough; JWT cookie is already set.
-        router.push("/");
       } else if (result?.ok) {
-        // ok=true but no url — treat as success, push to home
+        // Successful login — JWT cookie is set. Navigate to home.
         router.push("/");
       } else {
         setError("Terjadi kesalahan saat masuk. Coba lagi.");
       }
-    } catch {
+    } catch (err) {
+      console.error("[login] signIn threw:", err instanceof Error ? err.message : String(err));
       setError("Tidak dapat terhubung ke server. Coba lagi.");
     } finally {
       setIsLoading(false);
