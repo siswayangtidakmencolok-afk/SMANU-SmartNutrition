@@ -4,9 +4,11 @@
  * POST /api/food-scanner
  *
  * Accepts a base64-encoded food image, runs Gemini Vision to produce
- * candidate food names, then matches against the local food database.
+ * candidate food names, then matches against:
+ *   1. The in-memory FOOD_DATABASE (TKPI-2017 — fast, always available).
+ *   2. The Neon food_items table (USDA-FDC + any future additions).
  *
- * REQUEST (multipart/form-data or JSON):
+ * REQUEST (JSON):
  *   { imageBase64: string, mimeType: "image/jpeg"|"image/png"|"image/webp" }
  *
  * RESPONSE 200:
@@ -31,6 +33,10 @@
 import { NextRequest } from "next/server";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { searchFoodByName } from "@/lib/food-database";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { or, ilike } from "drizzle-orm";
+import { foodItems } from "@/lib/db/schema";
 
 export const runtime = "nodejs";
 
@@ -82,6 +88,54 @@ ATURAN:
 - JANGAN menyebut kandungan gizi, berat, atau bahan tersembunyi — kamu hanya melihat gambar.
 - Jika ada beberapa makanan dalam satu piring, sebutkan makanan yang paling dominan.
 - Berikan respons dalam Bahasa Indonesia.`;
+
+// ── DB food lookup ────────────────────────────────────────────────────────────
+/**
+ * Look up a food name in both the in-memory TKPI-2017 database and the Neon
+ * food_items table (USDA-FDC + future additions).
+ *
+ * Priority: TKPI-2017 in-memory first (preferred for Indonesian foods),
+ * then Neon if no match found. Returns the best match's foodId, or null.
+ *
+ * The foodId returned maps to food_items.food_id, so downstream code can
+ * query either source via estimateNutrition() (in-memory) or the DB route.
+ */
+async function lookupFoodId(name: string): Promise<{ foodId: string | null; namePrimary: string }> {
+  // 1. Try in-memory TKPI-2017 first
+  const memMatches = searchFoodByName(name);
+  if (memMatches.length > 0) {
+    return { foodId: memMatches[0].foodId, namePrimary: memMatches[0].namePrimary };
+  }
+
+  // 2. Fall back to Neon DB (USDA-FDC records)
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return { foodId: null, namePrimary: name };
+
+  try {
+    const client = neon(dbUrl);
+    const db = drizzle(client, { schema: { foodItems } });
+    const q = `%${name.trim()}%`;
+    const rows = await db
+      .select({ foodId: foodItems.foodId, namePrimary: foodItems.namePrimary })
+      .from(foodItems)
+      .where(
+        or(
+          ilike(foodItems.namePrimary, q),
+          ilike(foodItems.nameEnglish, q)
+        )
+      )
+      .limit(1);
+
+    if (rows.length > 0) {
+      return { foodId: rows[0].foodId, namePrimary: rows[0].namePrimary };
+    }
+  } catch (err) {
+    // Non-fatal — continue with null; don't block the scan result
+    console.warn("[food-scanner] Neon DB lookup failed:", err instanceof Error ? err.message : err);
+  }
+
+  return { foodId: null, namePrimary: name };
+}
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
@@ -199,19 +253,21 @@ export async function POST(req: NextRequest) {
     } satisfies ScanResponse);
   }
 
-  // 7. Match candidates to food database
+  // 7. Match candidates to food database (TKPI in-memory, then Neon USDA)
   const rawCandidates = Array.isArray(parsed.candidates) ? parsed.candidates : [];
-  const candidates: ScanCandidate[] = rawCandidates.slice(0, 3).map((c) => {
-    const matches = searchFoodByName(c.name ?? "");
-    const best    = matches[0] ?? null;
-    return {
-      foodId:      best?.foodId ?? null,
-      namePrimary: best?.namePrimary ?? c.name ?? "Makanan tidak dikenal",
-      confidence:  (["high", "medium", "low"].includes(c.confidence) ? c.confidence : "low") as
-                   "high" | "medium" | "low",
-      reason:      (c.reason ?? "").slice(0, 200),
-    };
-  });
+  const candidates: ScanCandidate[] = await Promise.all(
+    rawCandidates.slice(0, 3).map(async (c) => {
+      const { foodId, namePrimary } = await lookupFoodId(c.name ?? "");
+      return {
+        foodId,
+        namePrimary: namePrimary ?? c.name ?? "Makanan tidak dikenal",
+        confidence: (["high", "medium", "low"].includes(c.confidence)
+          ? c.confidence
+          : "low") as "high" | "medium" | "low",
+        reason: (c.reason ?? "").slice(0, 200),
+      };
+    })
+  );
 
   return Response.json({
     candidates,

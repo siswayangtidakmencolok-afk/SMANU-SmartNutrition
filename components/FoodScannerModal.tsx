@@ -9,16 +9,28 @@
  *  idle → capturing (camera / upload) → analyzing → candidates
  *       → portion → result → [save if logged in] → done
  *
+ * CHANGES (v2):
+ *  - generateScanInsights() from nutrition-knowledge-engine integrated in result panel.
+ *  - DRI % bars shown for each macronutrient.
+ *  - "Laporkan makanan" button in result panel for foodId=null foods.
+ *  - foodId=null handled gracefully: clear message + candidate submission offer.
+ *
  * LIMITATIONS (displayed to user):
  *  - Vision model can ONLY suggest names based on visual appearance.
  *  - Weight, recipe, hidden ingredients cannot be determined from a photo.
- *  - Nutrition values are ESTIMATIONS from TKPI-2017 reference data.
+ *  - Nutrition values are ESTIMATIONS from TKPI-2017 / USDA-FDC reference data.
  *  - Guest users' results are NOT saved to the database.
  */
 
 import { useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { getFoodById, estimateNutrition, FOOD_DATABASE } from "@/lib/food-database";
+import {
+  generateScanInsights,
+  SCAN_DISCLAIMER,
+  type ScanNutritionSummary,
+  type NutritionInsight,
+} from "@/lib/nutrition-knowledge-engine";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,6 +77,13 @@ const CONFIDENCE_COLOR: Record<string, string> = {
   low:    "text-slate-600 bg-slate-50 border-slate-200",
 };
 
+const LEVEL_COLOR: Record<string, string> = {
+  "Tinggi":         "bg-emerald-500",
+  "Sedang":         "bg-amber-400",
+  "Rendah":         "bg-slate-300",
+  "Tidak diketahui": "bg-slate-200",
+};
+
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -100,9 +119,12 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
   const [portionLabel, setPortionLabel]   = useState<string>("");
   const [customPortion, setCustomPortion] = useState<string>("");
   const [result, setResult]               = useState<NutritionResult | null>(null);
+  const [insights, setInsights]           = useState<NutritionInsight[]>([]);
   const [error, setError]                 = useState<string>("");
   const [saving, setSaving]               = useState(false);
   const [savedId, setSavedId]             = useState<string>("");
+  const [reportingCandidate, setReportingCandidate] = useState(false);
+  const [candidateReported, setCandidateReported]   = useState(false);
 
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -173,6 +195,7 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
 
   function handleSelectCandidate(c: Candidate) {
     setSelectedCandidate(c);
+    setCandidateReported(false);
     // Pre-fill default portion from DB if available
     const food = c.foodId ? getFoodById(c.foodId) : null;
     if (food) {
@@ -199,29 +222,78 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
 
     const food = selectedCandidate.foodId ? getFoodById(selectedCandidate.foodId) : null;
     const nutrition = food ? estimateNutrition(selectedCandidate.foodId!, g) : null;
+    const actualPortionLabel = customPortion ? `${g} g (dimasukkan manual)` : portionLabel;
 
     if (!nutrition) {
-      // Food not in DB — show limited result
+      // Food not in DB — show limited result, enable candidate submission
       setResult({
         energyKcal:   0,
         proteinG:     0,
         fatG:         0,
         carbG:        0,
         portionG:     g,
-        portionLabel: customPortion ? `${g} g (dimasukkan manual)` : portionLabel,
+        portionLabel: actualPortionLabel,
         isEstimate:   true,
         dataSource:   "—",
-        assumptions:  "Makanan ini belum tersedia dalam database gizi SMANU. Informasi nutrisi tidak dapat dihitung.",
-        foodName:     selectedCandidate.namePrimary,
+        assumptions:
+          "Makanan ini belum tersedia dalam database gizi SMANU. " +
+          "Informasi nutrisi tidak dapat dihitung saat ini.",
+        foodName: selectedCandidate.namePrimary,
       });
+      setInsights([]);
     } else {
-      setResult({
+      const newResult: NutritionResult = {
         ...nutrition,
-        portionLabel: customPortion ? `${g} g (dimasukkan manual)` : portionLabel,
-        foodName:     selectedCandidate.namePrimary,
-      });
+        portionLabel: actualPortionLabel,
+        foodName: selectedCandidate.namePrimary,
+      };
+      setResult(newResult);
+
+      // Generate educational insights from nutrition-knowledge-engine
+      const summary: ScanNutritionSummary = {
+        foodName:    selectedCandidate.namePrimary,
+        portionG:    g,
+        portionLabel: actualPortionLabel,
+        energyKcal:  nutrition.energyKcal,
+        proteinG:    nutrition.proteinG,
+        fatG:        nutrition.fatG,
+        carbG:       nutrition.carbG,
+        fiberG:      nutrition.fiberG ?? null,
+        dataSource:  nutrition.dataSource,
+        isEstimate:  nutrition.isEstimate,
+        assumptions: nutrition.assumptions,
+      };
+      setInsights(generateScanInsights(summary));
     }
     setStep("result");
+  }
+
+  // ── Report unknown food (candidate submission) ────────────────────────────
+
+  async function handleReportUnknown() {
+    if (!selectedCandidate || reportingCandidate || candidateReported) return;
+    setReportingCandidate(true);
+    try {
+      const res = await fetch("/api/food-scanner/candidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          foodNameRaw:        selectedCandidate.namePrimary,
+          submissionSource:   "vision_unmatched",
+          originalVisionName: selectedCandidate.namePrimary,
+          originalConfidence: selectedCandidate.confidence,
+        }),
+      });
+      if (res.ok) {
+        setCandidateReported(true);
+      } else {
+        setError("Gagal melaporkan makanan. Coba lagi.");
+      }
+    } catch {
+      setError("Tidak dapat menghubungi server.");
+    } finally {
+      setReportingCandidate(false);
+    }
   }
 
   // ── Save result ──────────────────────────────────────────────────────────────
@@ -266,8 +338,10 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
     setCandidates([]);
     setSelectedCandidate(null);
     setResult(null);
+    setInsights([]);
     setError("");
     setSavedId("");
+    setCandidateReported(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
   }
@@ -502,6 +576,11 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
                 <div>
                   <p className="text-xs text-slate-500">Makanan dipilih:</p>
                   <p className="text-sm font-bold text-slate-800">{selectedCandidate.namePrimary}</p>
+                  {!selectedCandidate.foodId && (
+                    <p className="text-[10px] text-amber-600 mt-0.5">
+                      Makanan ini belum ada di database — estimasi nutrisi tidak tersedia.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -562,7 +641,7 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
                 className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[18px]">calculate</span>
-                Hitung Estimasi Nutrisi
+                {selectedCandidate.foodId ? "Hitung Estimasi Nutrisi" : "Lihat Info & Lanjutkan"}
               </button>
             </div>
           )}
@@ -580,18 +659,76 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
               </div>
 
               {result.dataSource === "—" ? (
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">
-                  Makanan ini belum tersedia dalam database gizi SMANU.<br />
-                  Nilai nutrisi tidak dapat dihitung untuk saat ini.
+                /* ── Not in DB — clear message + candidate report ─────── */
+                <div className="flex flex-col gap-3">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-slate-400 text-[20px]">
+                        help_outline
+                      </span>
+                      <p className="text-sm font-semibold text-slate-700">
+                        Belum ada di database gizi SMANU
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Makanan <strong>{result.foodName}</strong> belum tersedia dalam database referensi
+                      (TKPI-2017 maupun USDA-FDC). Nilai nutrisi tidak dapat dihitung saat ini.
+                    </p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Kamu bisa melaporkannya agar tim SMANU dapat menambahkannya ke database di masa mendatang.
+                    </p>
+                  </div>
+
+                  {/* Report unknown food button */}
+                  {!candidateReported ? (
+                    <button
+                      onClick={handleReportUnknown}
+                      disabled={reportingCandidate}
+                      className="py-2.5 px-4 rounded-xl border border-[#006c49] text-[#006c49] text-sm font-semibold hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {reportingCandidate ? (
+                        <span className="w-4 h-4 border-2 border-[#006c49] border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                      )}
+                      {reportingCandidate ? "Melaporkan…" : "Laporkan Makanan Ini"}
+                    </button>
+                  ) : (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-emerald-600 text-[18px]">check_circle</span>
+                      <p className="text-xs text-emerald-700 font-medium">
+                        Terima kasih! Laporan diterima. Tim SMANU akan meninjau{" "}
+                        <strong>{result.foodName}</strong>.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <NutrientTile label="Energi" value={`${result.energyKcal} kkal`} accent="emerald" />
-                  <NutrientTile label="Protein" value={`${result.proteinG} g`} accent="blue" />
-                  <NutrientTile label="Lemak" value={`${result.fatG} g`} accent="orange" />
-                  <NutrientTile label="Karbohidrat" value={`${result.carbG} g`} accent="violet" />
-                  {result.fiberG != null && (
-                    <NutrientTile label="Serat" value={`${result.fiberG} g`} accent="slate" />
+                /* ── Has nutrition data — macros + insight bars ──────── */
+                <div className="flex flex-col gap-3">
+                  {/* Macro grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <NutrientTile label="Energi" value={`${result.energyKcal} kkal`} accent="emerald" />
+                    <NutrientTile label="Protein" value={`${result.proteinG} g`} accent="blue" />
+                    <NutrientTile label="Lemak" value={`${result.fatG} g`} accent="orange" />
+                    <NutrientTile label="Karbohidrat" value={`${result.carbG} g`} accent="violet" />
+                    {result.fiberG != null && (
+                      <NutrientTile label="Serat" value={`${result.fiberG} g`} accent="slate" />
+                    )}
+                  </div>
+
+                  {/* DRI insight bars */}
+                  {insights.length > 0 && (
+                    <div className="flex flex-col gap-0">
+                      <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
+                        Kontribusi terhadap kebutuhan harian (AKG remaja ~15 th):
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {insights.map((ins) => (
+                          <InsightBar key={ins.nutrient} insight={ins} />
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -600,7 +737,7 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
               <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-amber-500 text-[15px]">info</span>
-                  <p className="text-[11px] font-semibold text-amber-800">Asumsi & Sumber Data</p>
+                  <p className="text-[11px] font-semibold text-amber-800">Asumsi &amp; Sumber Data</p>
                 </div>
                 <p className="text-[11px] text-amber-700 leading-relaxed">{result.assumptions}</p>
                 {result.dataSource !== "—" && (
@@ -608,35 +745,36 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
                     Sumber: {result.dataSource === "TKPI-2017"
                       ? "Tabel Komposisi Pangan Indonesia 2017, Kemenkes RI"
                       : result.dataSource === "USDA-FDC"
-                      ? "USDA FoodData Central (SR Legacy)"
+                      ? "USDA FoodData Central (Foundation Foods)"
                       : "Estimasi — tidak ada data terverifikasi"}
                   </p>
                 )}
               </div>
 
               <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-[10px] text-slate-500 leading-relaxed text-center">
-                Nilai ini adalah <strong>estimasi edukatif</strong>, bukan pengukuran aktual.
-                Tidak dapat digunakan untuk diagnosis atau pengelolaan kondisi medis.
+                {SCAN_DISCLAIMER}
               </div>
 
               {/* Save / guest notice */}
-              {isLoggedIn ? (
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
-                >
-                  {saving ? (
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span className="material-symbols-outlined text-[18px]">bookmark</span>
-                  )}
-                  {saving ? "Menyimpan…" : "Simpan ke Riwayat"}
-                </button>
-              ) : (
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">
-                  <span className="font-medium text-slate-700">Login</span> untuk menyimpan hasil scan ke riwayatmu.
-                </div>
+              {result.dataSource !== "—" && (
+                isLoggedIn ? (
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {saving ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                    )}
+                    {saving ? "Menyimpan…" : "Simpan ke Riwayat"}
+                  </button>
+                ) : (
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">
+                    <span className="font-medium text-slate-700">Login</span> untuk menyimpan hasil scan ke riwayatmu.
+                  </div>
+                )
               )}
 
               <button
@@ -677,6 +815,14 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+const ACCENT_MAP: Record<string, string> = {
+  emerald: "bg-emerald-50 border-emerald-100 text-emerald-800",
+  blue:    "bg-blue-50 border-blue-100 text-blue-800",
+  orange:  "bg-orange-50 border-orange-100 text-orange-800",
+  violet:  "bg-violet-50 border-violet-100 text-violet-800",
+  slate:   "bg-slate-50 border-slate-200 text-slate-700",
+};
+
 function NutrientTile({
   label,
   value,
@@ -684,75 +830,120 @@ function NutrientTile({
 }: {
   label: string;
   value: string;
-  accent: "emerald" | "blue" | "orange" | "violet" | "slate";
+  accent: string;
 }) {
-  const colors: Record<string, string> = {
-    emerald: "bg-emerald-50 border-emerald-200 text-emerald-800",
-    blue:    "bg-blue-50 border-blue-200 text-blue-800",
-    orange:  "bg-orange-50 border-orange-200 text-orange-800",
-    violet:  "bg-violet-50 border-violet-200 text-violet-800",
-    slate:   "bg-slate-50 border-slate-200 text-slate-700",
-  };
+  const cls = ACCENT_MAP[accent] ?? ACCENT_MAP.slate;
   return (
-    <div className={`flex flex-col gap-0.5 p-3 rounded-xl border ${colors[accent]}`}>
+    <div className={`rounded-xl border p-3 flex flex-col gap-0.5 ${cls}`}>
       <p className="text-[10px] font-medium opacity-70">{label}</p>
-      <p className="text-lg font-bold leading-tight">{value}</p>
+      <p className="text-base font-bold leading-tight">{value}</p>
     </div>
   );
 }
 
-/** Simple text-based fallback search when vision candidates don't match. */
-function ManualFoodSearch({ onSelect }: { onSelect: (c: Candidate) => void }) {
-  const [query, setQuery] = useState("");
-  const [open, setOpen]   = useState(false);
-
-  const results = query.trim().length >= 2
-    ? FOOD_DATABASE.filter(
-        (f) =>
-          f.namePrimary.toLowerCase().includes(query.toLowerCase()) ||
-          f.nameAliases.some((a) => a.toLowerCase().includes(query.toLowerCase()))
-      ).slice(0, 5)
-    : [];
+/**
+ * DRI insight bar — shows nutrient name, insight text, and a progress bar.
+ */
+function InsightBar({ insight }: { insight: NutritionInsight }) {
+  const barWidth = insight.driPct !== null ? Math.min(insight.driPct, 100) : 0;
+  const barColor = LEVEL_COLOR[insight.level] ?? "bg-slate-300";
 
   return (
-    <div className="border-t border-slate-100 pt-3">
-      {!open ? (
-        <button
-          onClick={() => setOpen(true)}
-          className="text-xs text-[#006c49] font-semibold underline underline-offset-2"
-        >
-          + Cari makanan secara manual
-        </button>
-      ) : (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold text-slate-600">Cari makanan manual:</p>
-          <input
-            type="text"
-            placeholder="Ketik nama makanan…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#006c49] focus:ring-2 focus:ring-[#006c49]/20 transition-all"
-            autoFocus
-          />
-          {results.length > 0 && (
-            <div className="flex flex-col gap-1">
-              {results.map((f) => (
-                <button
-                  key={f.foodId}
-                  onClick={() => onSelect({ foodId: f.foodId, namePrimary: f.namePrimary, confidence: "low", reason: "Dipilih manual" })}
-                  className="text-left px-3 py-2 rounded-lg border border-slate-100 hover:border-[#006c49]/40 hover:bg-emerald-50/30 text-xs text-slate-700 font-medium transition-all"
-                >
-                  {f.namePrimary}
-                  <span className="text-slate-400 font-normal ml-1">— {f.category}</span>
-                </button>
-              ))}
-            </div>
-          )}
-          {query.trim().length >= 2 && results.length === 0 && (
-            <p className="text-xs text-slate-400">Tidak ditemukan dalam database saat ini.</p>
-          )}
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold text-slate-700">{insight.nutrient}</p>
+        <span className="text-[10px] text-slate-400 shrink-0">
+          {insight.driPct !== null ? `${insight.driPct}% AKG` : "—"}
+        </span>
+      </div>
+      {/* Progress bar */}
+      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${barColor}`}
+          style={{ width: `${barWidth}%` }}
+        />
+      </div>
+      <p className="text-[10px] text-slate-500 leading-relaxed">{insight.insight}</p>
+    </div>
+  );
+}
+
+function ManualFoodSearch({ onSelect }: { onSelect: (c: Candidate) => void }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<typeof FOOD_DATABASE>([]);
+  const [open, setOpen] = useState(false);
+
+  function handleSearch(q: string) {
+    setQuery(q);
+    if (q.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    const lower = q.toLowerCase();
+    setResults(
+      FOOD_DATABASE.filter(
+        (f) =>
+          f.namePrimary.toLowerCase().includes(lower) ||
+          f.nameAliases.some((a) => a.toLowerCase().includes(lower))
+      ).slice(0, 6)
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex items-center gap-1.5 text-xs text-[#006c49] font-medium self-start"
+      >
+        <span className="material-symbols-outlined text-[15px]">search</span>
+        Cari makanan secara manual
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 border border-slate-200 rounded-xl p-3">
+      <p className="text-xs font-semibold text-slate-700">Cari nama makanan:</p>
+      <input
+        autoFocus
+        type="text"
+        placeholder="mis. nasi putih, tempe goreng…"
+        value={query}
+        onChange={(e) => handleSearch(e.target.value)}
+        className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#006c49] focus:ring-2 focus:ring-[#006c49]/20"
+      />
+      {results.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {results.map((f) => (
+            <button
+              key={f.foodId}
+              onClick={() =>
+                onSelect({
+                  foodId:      f.foodId,
+                  namePrimary: f.namePrimary,
+                  confidence:  "high",
+                  reason:      "Dipilih manual dari database",
+                })
+              }
+              className="text-left px-3 py-2 rounded-lg hover:bg-emerald-50 hover:text-[#006c49] text-xs text-slate-700 transition-colors"
+            >
+              {f.namePrimary}
+              <span className="text-slate-400 ml-1">— {f.category}</span>
+            </button>
+          ))}
         </div>
       )}
+      {query.length >= 2 && results.length === 0 && (
+        <p className="text-[11px] text-slate-400 text-center py-1">
+          Tidak ditemukan dalam database lokal.
+        </p>
+      )}
+      <button
+        onClick={() => { setOpen(false); setQuery(""); setResults([]); }}
+        className="text-[11px] text-slate-400 underline underline-offset-2 self-end"
+      >
+        Tutup
+      </button>
     </div>
   );
 }
