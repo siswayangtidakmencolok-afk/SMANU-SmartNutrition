@@ -137,10 +137,24 @@ export const foodScanLogs = pgTable("food_scan_logs", {
   estimatedFatG: real("estimated_fat_g"),
   estimatedCarbG: real("estimated_carb_g"),
 
+
+
+  estimatedFiberG: real("estimated_fiber_g"),
+
+  // Source status — distinguishes verified DB data from AI estimates
+  // 'database_verified' | 'ai_estimate' | 'unavailable'
+  dataStatus: text("data_status").default("database_verified"),
+
+  // Energy range string for high-uncertainty AI estimates (e.g. "450–600 kcal")
+  energyRange: text("energy_range"),
+
+  // Full structured AI explanation blob (7-section report) — null for DB results
+  explanationJson: jsonb("explanation_json"),
+
   // Meta
-  modelUsed: text("model_used"),                 // e.g. "gemini-2.0-flash"
+  modelUsed: text("model_used"),                 // e.g. "gemini-flash-lite-latest"
   confidenceNote: text("confidence_note"),       // e.g. "high" | "medium" | "low"
-  dataSourceUsed: text("data_source_used"),      // e.g. "TKPI-2017"
+  dataSourceUsed: text("data_source_used"),      // e.g. "TKPI-2017" | "Estimasi AI"
   assumptions: text("assumptions"),             // free-text assumptions displayed to user
 
   // Timestamps
