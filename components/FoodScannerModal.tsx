@@ -24,13 +24,14 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { getFoodById, estimateNutrition, FOOD_DATABASE } from "@/lib/food-database";
+import { getFoodById, FOOD_DATABASE } from "@/lib/food-database";
 import {
   generateScanInsights,
   SCAN_DISCLAIMER,
   type ScanNutritionSummary,
   type NutritionInsight,
 } from "@/lib/nutrition-knowledge-engine";
+import type { NutritionApiResponse } from "@/app/api/food-scanner/nutrition/route";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,15 +52,15 @@ interface Candidate {
 }
 
 interface NutritionResult {
-  energyKcal: number;
-  proteinG:   number;
-  fatG:       number;
-  carbG:      number;
-  fiberG?:    number;
-  portionG:   number;
+  energyKcal:  number | null;
+  proteinG:    number | null;
+  fatG:        number | null;
+  carbG:       number | null;
+  fiberG:      number | null;
+  portionG:    number;
   portionLabel: string;
-  isEstimate: boolean;
-  dataSource: string;
+  isEstimate:  boolean;
+  dataSource:  string;
   assumptions: string;
   foodName:    string;
 }
@@ -121,6 +122,7 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
   const [result, setResult]               = useState<NutritionResult | null>(null);
   const [insights, setInsights]           = useState<NutritionInsight[]>([]);
   const [error, setError]                 = useState<string>("");
+  const [calculatingNutrition, setCalcNutrition] = useState(false);
   const [saving, setSaving]               = useState(false);
   const [savedId, setSavedId]             = useState<string>("");
   const [reportingCandidate, setReportingCandidate] = useState(false);
@@ -193,25 +195,51 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
 
   // ── Candidate selection ──────────────────────────────────────────────────────
 
-  function handleSelectCandidate(c: Candidate) {
+  async function handleSelectCandidate(c: Candidate) {
     setSelectedCandidate(c);
     setCandidateReported(false);
-    // Pre-fill default portion from DB if available
-    const food = c.foodId ? getFoodById(c.foodId) : null;
-    if (food) {
-      setPortionG(food.typicalPortionG);
-      setPortionLabel(food.typicalPortionLabel);
+    setCustomPortion("");
+
+    // Pre-fill default portion.
+    // TKPI foods have typicalPortionG in-memory; USDA foods need an API call.
+    const memFood = c.foodId ? getFoodById(c.foodId) : null;
+    if (memFood) {
+      setPortionG(memFood.typicalPortionG);
+      setPortionLabel(memFood.typicalPortionLabel);
+    } else if (c.foodId) {
+      // USDA record — fetch typical portion from server
+      try {
+        const res = await fetch(
+          `/api/food-scanner/nutrition?foodId=${encodeURIComponent(c.foodId)}&portionG=100`
+        );
+        if (res.ok) {
+          const data = await res.json() as NutritionApiResponse;
+          if (data.typicalPortionG) {
+            setPortionG(data.typicalPortionG);
+            setPortionLabel(data.typicalPortionLabel ?? `${data.typicalPortionG} g`);
+          } else {
+            setPortionG(100);
+            setPortionLabel("perkiraan 100 g");
+          }
+        } else {
+          setPortionG(100);
+          setPortionLabel("perkiraan 100 g");
+        }
+      } catch {
+        setPortionG(100);
+        setPortionLabel("perkiraan 100 g");
+      }
     } else {
       setPortionG(100);
       setPortionLabel("perkiraan 100 g");
     }
-    setCustomPortion("");
+
     setStep("portion");
   }
 
   // ── Portion confirmation ────────────────────────────────────────────────────
 
-  function handleConfirmPortion() {
+  async function handleConfirmPortion() {
     if (!selectedCandidate) return;
     const g = customPortion ? parseFloat(customPortion) : portionG;
     if (!g || g <= 0 || g > 5000) {
@@ -219,18 +247,16 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
       return;
     }
     setError("");
-
-    const food = selectedCandidate.foodId ? getFoodById(selectedCandidate.foodId) : null;
-    const nutrition = food ? estimateNutrition(selectedCandidate.foodId!, g) : null;
     const actualPortionLabel = customPortion ? `${g} g (dimasukkan manual)` : portionLabel;
 
-    if (!nutrition) {
-      // Food not in DB — show limited result, enable candidate submission
+    if (!selectedCandidate.foodId) {
+      // Not in any DB — show "not found" result + candidate report option
       setResult({
-        energyKcal:   0,
-        proteinG:     0,
-        fatG:         0,
-        carbG:        0,
+        energyKcal:   null,
+        proteinG:     null,
+        fatG:         null,
+        carbG:        null,
+        fiberG:       null,
         portionG:     g,
         portionLabel: actualPortionLabel,
         isEstimate:   true,
@@ -241,31 +267,82 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
         foodName: selectedCandidate.namePrimary,
       });
       setInsights([]);
-    } else {
+      setStep("result");
+      return;
+    }
+
+    // Fetch nutrition from server (covers both TKPI and USDA-FDC via Neon)
+    setCalcNutrition(true);
+    try {
+      const res = await fetch(
+        `/api/food-scanner/nutrition?foodId=${encodeURIComponent(selectedCandidate.foodId)}&portionG=${g}`
+      );
+
+      if (res.status === 404) {
+        // foodId was returned by scanner but not found in DB on recheck
+        setResult({
+          energyKcal:   null,
+          proteinG:     null,
+          fatG:         null,
+          carbG:        null,
+          fiberG:       null,
+          portionG:     g,
+          portionLabel: actualPortionLabel,
+          isEstimate:   true,
+          dataSource:   "—",
+          assumptions:
+            "Makanan ini tidak ditemukan dalam database gizi SMANU. " +
+            "Nilai nutrisi tidak dapat dihitung.",
+          foodName: selectedCandidate.namePrimary,
+        });
+        setInsights([]);
+        setStep("result");
+        return;
+      }
+
+      if (!res.ok) {
+        setError("Gagal mengambil data nutrisi. Coba lagi.");
+        return;
+      }
+
+      const data = await res.json() as NutritionApiResponse;
+
       const newResult: NutritionResult = {
-        ...nutrition,
+        energyKcal:   data.energyKcal,
+        proteinG:     data.proteinG,
+        fatG:         data.fatG,
+        carbG:        data.carbG,
+        fiberG:       data.fiberG,
+        portionG:     data.portionG,
         portionLabel: actualPortionLabel,
-        foodName: selectedCandidate.namePrimary,
+        isEstimate:   data.isEstimate,
+        dataSource:   data.dataSource,
+        assumptions:  data.assumptions,
+        foodName:     selectedCandidate.namePrimary,
       };
       setResult(newResult);
 
-      // Generate educational insights from nutrition-knowledge-engine
+      // Generate educational insights — generateScanInsights safely handles nulls
       const summary: ScanNutritionSummary = {
-        foodName:    selectedCandidate.namePrimary,
-        portionG:    g,
+        foodName:     selectedCandidate.namePrimary,
+        portionG:     data.portionG,
         portionLabel: actualPortionLabel,
-        energyKcal:  nutrition.energyKcal,
-        proteinG:    nutrition.proteinG,
-        fatG:        nutrition.fatG,
-        carbG:       nutrition.carbG,
-        fiberG:      nutrition.fiberG ?? null,
-        dataSource:  nutrition.dataSource,
-        isEstimate:  nutrition.isEstimate,
-        assumptions: nutrition.assumptions,
+        energyKcal:   data.energyKcal,
+        proteinG:     data.proteinG,
+        fatG:         data.fatG,
+        carbG:        data.carbG,
+        fiberG:       data.fiberG,
+        dataSource:   data.dataSource,
+        isEstimate:   data.isEstimate,
+        assumptions:  data.assumptions,
       };
       setInsights(generateScanInsights(summary));
+      setStep("result");
+    } catch {
+      setError("Tidak dapat menghubungi server. Coba lagi.");
+    } finally {
+      setCalcNutrition(false);
     }
-    setStep("result");
   }
 
   // ── Report unknown food (candidate submission) ────────────────────────────
@@ -307,13 +384,20 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recognizedFoodId:   selectedCandidate.foodId,
-          recognizedFoodName: result.foodName,
-          candidatesJson:     candidates,
-          portionG:           result.portionG,
-          portionLabel:       result.portionLabel,
-          confidenceNote:     selectedCandidate.confidence,
-          modelUsed:          "gemini-flash-lite-latest",
+          recognizedFoodId:    selectedCandidate.foodId,
+          recognizedFoodName:  result.foodName,
+          candidatesJson:      candidates,
+          portionG:            result.portionG,
+          portionLabel:        result.portionLabel,
+          confidenceNote:      selectedCandidate.confidence,
+          modelUsed:           "gemini-flash-lite-latest",
+          // Pass pre-computed nutrition so save route doesn't need to re-query
+          estimatedEnergyKcal: result.energyKcal,
+          estimatedProteinG:   result.proteinG,
+          estimatedFatG:       result.fatG,
+          estimatedCarbG:      result.carbG,
+          dataSourceUsed:      result.dataSource !== "—" ? result.dataSource : undefined,
+          assumptions:         result.assumptions,
         }),
       });
       const json = await res.json() as { id?: string; error?: string };
@@ -638,10 +722,19 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
 
               <button
                 onClick={handleConfirmPortion}
-                className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2"
+                disabled={calculatingNutrition}
+                className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                <span className="material-symbols-outlined text-[18px]">calculate</span>
-                {selectedCandidate.foodId ? "Hitung Estimasi Nutrisi" : "Lihat Info & Lanjutkan"}
+                {calculatingNutrition ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span className="material-symbols-outlined text-[18px]">calculate</span>
+                )}
+                {calculatingNutrition
+                  ? "Mengambil data nutrisi…"
+                  : selectedCandidate.foodId
+                    ? "Hitung Estimasi Nutrisi"
+                    : "Lihat Info & Lanjutkan"}
               </button>
             </div>
           )}
@@ -706,16 +799,44 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
               ) : (
                 /* ── Has nutrition data — macros + insight bars ──────── */
                 <div className="flex flex-col gap-3">
-                  {/* Macro grid */}
+                  {/* Macro grid — null values shown as "—" (partial USDA data) */}
                   <div className="grid grid-cols-2 gap-2">
-                    <NutrientTile label="Energi" value={`${result.energyKcal} kkal`} accent="emerald" />
-                    <NutrientTile label="Protein" value={`${result.proteinG} g`} accent="blue" />
-                    <NutrientTile label="Lemak" value={`${result.fatG} g`} accent="orange" />
-                    <NutrientTile label="Karbohidrat" value={`${result.carbG} g`} accent="violet" />
+                    <NutrientTile
+                      label="Energi"
+                      value={result.energyKcal != null ? `${result.energyKcal} kkal` : "—"}
+                      accent="emerald"
+                      unavailable={result.energyKcal == null}
+                    />
+                    <NutrientTile
+                      label="Protein"
+                      value={result.proteinG != null ? `${result.proteinG} g` : "—"}
+                      accent="blue"
+                      unavailable={result.proteinG == null}
+                    />
+                    <NutrientTile
+                      label="Lemak"
+                      value={result.fatG != null ? `${result.fatG} g` : "—"}
+                      accent="orange"
+                      unavailable={result.fatG == null}
+                    />
+                    <NutrientTile
+                      label="Karbohidrat"
+                      value={result.carbG != null ? `${result.carbG} g` : "—"}
+                      accent="violet"
+                      unavailable={result.carbG == null}
+                    />
                     {result.fiberG != null && (
                       <NutrientTile label="Serat" value={`${result.fiberG} g`} accent="slate" />
                     )}
                   </div>
+                  {/* Note if any macros are missing */}
+                  {(result.energyKcal == null || result.proteinG == null ||
+                    result.fatG == null || result.carbG == null) && (
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      "—" menunjukkan data tidak tersedia dalam sumber {result.dataSource}.
+                      USDA Foundation Foods mengukur nutrisi secara selektif.
+                    </p>
+                  )}
 
                   {/* DRI insight bars */}
                   {insights.length > 0 && (
@@ -827,16 +948,22 @@ function NutrientTile({
   label,
   value,
   accent,
+  unavailable = false,
 }: {
-  label: string;
-  value: string;
-  accent: string;
+  label:        string;
+  value:        string;
+  accent:       string;
+  unavailable?: boolean;
 }) {
-  const cls = ACCENT_MAP[accent] ?? ACCENT_MAP.slate;
+  const cls = unavailable
+    ? "bg-slate-50 border-slate-200 text-slate-400"
+    : (ACCENT_MAP[accent] ?? ACCENT_MAP.slate);
   return (
     <div className={`rounded-xl border p-3 flex flex-col gap-0.5 ${cls}`}>
       <p className="text-[10px] font-medium opacity-70">{label}</p>
-      <p className="text-base font-bold leading-tight">{value}</p>
+      <p className={`text-base font-bold leading-tight ${unavailable ? "text-slate-300" : ""}`}>
+        {value}
+      </p>
     </div>
   );
 }
