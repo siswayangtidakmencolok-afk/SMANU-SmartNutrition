@@ -1,0 +1,193 @@
+# SMANU AI Food Scanner — Dataset Manifest
+# Phase 1 · Version 0.1 · Status: PLANNING / NOT YET COLLECTED
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PURPOSE
+# ═══════════════════════════════════════════════════════════════════════════
+# This manifest defines the INTENDED structure for a labeled food image dataset
+# to evaluate whether a general-purpose vision model (Gemini) can adequately
+# recognize common Indonesian student foods WITHOUT fine-tuning.
+#
+# ── CURRENT STATUS ─────────────────────────────────────────────────────────
+# No images have been collected yet.
+# Fine-tuning must NOT be performed until:
+#   1. This dataset has been collected with proper licensing.
+#   2. Human verification of all labels is complete.
+#   3. Baseline evaluation (zero-shot) results are documented.
+#   4. Results show that fine-tuning is needed AND justified.
+# ═══════════════════════════════════════════════════════════════════════════
+
+schema_version: "0.1"
+created: "2025-01-01"
+status: "planning"
+phase: 1
+
+# ── Scope ───────────────────────────────────────────────────────────────────
+# Phase 1 classes are limited to foods that:
+#   (a) appear in the TKPI-2017 food database (verified nutrition data), AND
+#   (b) are commonly found in Indonesian school canteens, AND
+#   (c) have sufficiently distinct visual appearance to be separable.
+#
+# Known difficult pairs (require careful labeling):
+#   - tahu goreng vs tempe goreng  (similar shape, different texture)
+#   - telur dadar vs telur mata sapi  (same ingredient, different preparation)
+#   - nasi putih vs nasi goreng  (colouring and texture differ but subtle)
+# ════════════════════════════════════════════════════════════════════════════
+
+classes:
+  - id: nasi-putih
+    label: "Nasi Putih"
+    food_db_id: nasi-putih
+    visual_distinguishing_features:
+      - "Butiran nasi putih, tekstur lembab, warna putih"
+      - "Disajikan dalam piring/mangkok, biasanya membentuk gundukan"
+    common_confusions:
+      - "nasi goreng (lebih cokelat/kekuningan, ada bintik-bintik bumbu)"
+    target_sample_count: 50
+    collected: 0
+
+  - id: nasi-goreng
+    label: "Nasi Goreng"
+    food_db_id: nasi-goreng
+    visual_distinguishing_features:
+      - "Warna kecokelatan/kekuningan dari kecap/bumbu"
+      - "Tekstur lebih kering dibanding nasi putih"
+      - "Kadang ada potongan sayuran, telur, atau bawang goreng"
+    common_confusions:
+      - "nasi putih (jika nasi goreng berwarna sangat terang)"
+    target_sample_count: 50
+    collected: 0
+
+  - id: telur-dadar
+    label: "Telur Dadar"
+    food_db_id: telur-goreng
+    visual_distinguishing_features:
+      - "Bentuk pipih bulat/oval, permukaan kuning kecokelatan"
+      - "Biasanya dilipat atau setengah lingkaran"
+    common_confusions:
+      - "telur mata sapi (tidak dilipat, kuning telur terlihat)"
+    target_sample_count: 50
+    collected: 0
+
+  - id: telur-rebus
+    label: "Telur Rebus"
+    food_db_id: telur-rebus
+    visual_distinguishing_features:
+      - "Bulat utuh atau dibelah dua, penampang putih dan kuning"
+      - "Tidak ada lapisan minyak goreng"
+    common_confusions:
+      - "telur dadar (jika sudah dibelah dan difoto dari atas)"
+    target_sample_count: 50
+    collected: 0
+
+  - id: tempe-goreng
+    label: "Tempe Goreng"
+    food_db_id: tempe-goreng
+    visual_distinguishing_features:
+      - "Tekstur berpori/berbutir putih (miselium kapang)"
+      - "Warna cokelat keemasan setelah digoreng"
+      - "Sering berbentuk persegi panjang atau irisan"
+    common_confusions:
+      - "tahu goreng (tahu tidak memiliki tekstur berpori)"
+    target_sample_count: 60    # lebih banyak karena mudah dikonfusikan
+    collected: 0
+
+  - id: tahu-goreng
+    label: "Tahu Goreng"
+    food_db_id: tahu-goreng
+    visual_distinguishing_features:
+      - "Permukaan halus/rata setelah digoreng, berwarna kuning"
+      - "Tidak ada tekstur berpori seperti tempe"
+      - "Bisa berlubang di tengah (tahu pong)"
+    common_confusions:
+      - "tempe goreng (tekstur sangat berbeda bila foto jelas)"
+    target_sample_count: 60
+    collected: 0
+
+  - id: ayam-goreng
+    label: "Ayam Goreng"
+    food_db_id: ayam-goreng
+    visual_distinguishing_features:
+      - "Daging berwarna cokelat keemasan, lapisan kulit/tepung"
+      - "Terlihat tulang atau potongan khas ayam (sayap, paha, dada)"
+    common_confusions:
+      - "ikan goreng (bentuk pipih untuk ikan, kompak untuk ayam)"
+    target_sample_count: 50
+    collected: 0
+
+  - id: ikan-goreng
+    label: "Ikan Goreng"
+    food_db_id: ikan-goreng
+    visual_distinguishing_features:
+      - "Bentuk pipih, terlihat sirip/ekor, atau tulang ikan"
+      - "Warna cokelat keemasan, sering lebih kecil dari ayam"
+    common_confusions:
+      - "ayam goreng (jika foto tidak menampilkan seluruh bentuk)"
+    target_sample_count: 50
+    collected: 0
+
+# ── Sample Metadata Schema ──────────────────────────────────────────────────
+# Every collected image must include this metadata in the accompanying JSON file.
+# File naming: <class_id>_<source_abbrev>_<4digit_seq>.jpg
+# Metadata file: <same_filename>.json
+sample_schema:
+  image_id:           "string — unique identifier, e.g. nasi-putih_own_0001"
+  file_path:          "string — relative path from dataset root, e.g. train/nasi-putih/nasi-putih_own_0001.jpg"
+  label_primary:      "string — verified food class id, e.g. nasi-putih"
+  label_alternate:    "string | null — if genuinely ambiguous, secondary class id"
+  human_verified:     "boolean — must be true before any evaluation or training use"
+  lighting:           "bright | natural | dim | artificial"
+  angle:              "top-down | oblique | side | close-up"
+  background:         "plate | table | tray | hand | mixed"
+  cooking_method:     "string | null — only if clearly identifiable from photo"
+  multiple_foods:     "boolean — true if other foods are visible in frame"
+  photo_source:       "own | cc0 | cc-by | cc-by-sa | other"
+  photo_credit:       "string | null — required if not own"
+  license_url:        "string | null — required if not own"
+  split:              "train | val | test"
+  validation_status:  "pending | approved | rejected"
+  rejection_reason:   "string | null"
+
+# ── Split Strategy ──────────────────────────────────────────────────────────
+# IMPORTANT: split by SOURCE SESSION / PHOTOGRAPHER, not random.
+# Photos taken in the same session of the same dish MUST NOT be split across
+# train and val/test — this prevents data leakage from near-duplicate frames.
+split_strategy:
+  method: "source-session-based"
+  rationale: >
+    Random splits would allow near-identical frames of the same dish taken
+    seconds apart to appear in both training and test sets, inflating metrics.
+    Instead, all images from the same collection session are assigned to one split.
+  target_split_ratio:
+    train: 0.70
+    val: 0.15
+    test: 0.15
+  test_set_policy: >
+    Test set must NOT be used for any model tuning or threshold selection.
+    Evaluate on test set only once per major model change.
+    Log every evaluation run with date, model version, and full metrics.
+
+# ── Licensing Requirements ──────────────────────────────────────────────────
+# Only use images that meet ONE of these criteria:
+#   (a) Taken by SMANU team (own), with explicit consent if people appear.
+#   (b) CC0 / public domain (no attribution required).
+#   (c) CC-BY or CC-BY-SA (attribution required — document in photo_credit).
+#   (d) Written permission from original photographer (attach proof).
+#
+# Do NOT use:
+#   - Images scraped from the web without verified licensing.
+#   - Images with "all rights reserved" even if "educational use" is argued.
+#   - Images from Google Images, Shutterstock, or similar without a free license.
+licensing_requirements:
+  allowed_licenses: ["own", "cc0", "cc-by", "cc-by-sa", "written_permission"]
+  documentation_required: true
+
+# ── Minimum Criteria Before Fine-Tuning ────────────────────────────────────
+# Fine-tuning is NOT authorized until ALL of the following are met:
+fine_tuning_gate:
+  - "Baseline zero-shot evaluation completed and documented (see eval/)"
+  - "All samples have human_verified=true"
+  - "test_set_size >= 20 per class"
+  - "No licensing violations — all records have valid source documentation"
+  - "Confusion matrix shows that fine-tuning would meaningfully improve results"
+  - "A written decision note is added to eval/DECISION.md"

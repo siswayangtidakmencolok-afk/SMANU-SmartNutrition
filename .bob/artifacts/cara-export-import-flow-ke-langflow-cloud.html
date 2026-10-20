@@ -1,0 +1,424 @@
+
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Export &amp; Import Langflow Flow</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    background: #fff;
+    color: #1f2328;
+    padding: 28px 20px 48px;
+  }
+  .container { max-width: 760px; margin: 0 auto; }
+
+  .header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+  .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .header p { color: #57606a; font-size: 13px; }
+
+  /* Progress bar */
+  .progress { display: flex; align-items: center; gap: 0; margin-bottom: 28px; }
+  .prog-step {
+    flex: 1; text-align: center; font-size: 11px; font-weight: 600;
+    padding: 8px 4px; border-radius: 6px; color: #57606a;
+    background: #f7f8fa; border: 1px solid #e5e7eb;
+  }
+  .prog-step.active { background: #3b82d4; color: #fff; border-color: #3b82d4; }
+  .prog-step.done { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+  .prog-arrow { color: #d1d5db; font-size: 16px; padding: 0 4px; flex-shrink: 0; }
+
+  /* Part headers */
+  .part-label {
+    display: flex; align-items: center; gap-: 10px;
+    background: #f7f8fa; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 10px 14px;
+    margin-bottom: 14px; margin-top: 20px;
+  }
+  .part-badge {
+    background: #1f2328; color: #fff; border-radius: 5px;
+    padding: 2px 8px; font-size: 11px; font-weight: 700;
+    margin-right: 10px; white-space: nowrap;
+  }
+  .part-badge.b { background: #7c5cd8; }
+  .part-badge.c { background: #16a34a; }
+  .part-title { font-size: 14px; font-weight: 700; color: #1f2328; }
+
+  /* Steps */
+  .step {
+    border: 1px solid #e5e7eb; border-radius: 10px;
+    margin-bottom: 12px; overflow: hidden;
+  }
+  .step-head {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px; background: #fafafa;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .num {
+    min-width: 26px; height: 26px; border-radius: 50%;
+    background: #3b82d4; color: #fff;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .num.purple { background: #7c5cd8; }
+  .num.green { background: #16a34a; }
+  .step-title { font-size: 13px; font-weight: 700; color: #1f2328; }
+  .step-sub { font-size: 11px; color: #57606a; margin-top: 1px; }
+  .step-body { padding: 14px 16px; }
+  .step-body p { font-size: 13px; margin-bottom: 8px; }
+
+  /* UI mockup boxes */
+  .mockup {
+    background: #1e1e2e; border-radius: 10px;
+    padding: 16px; margin: 10px 0; font-family: monospace;
+    position: relative; overflow: hidden;
+  }
+  .mockup-title {
+    font-size: 10px; color: #64748b; margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .flow-card {
+    background: #2d2d3f; border-radius: 8px; padding: 12px 14px;
+    border: 1px solid #3d3d50;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .flow-name { color: #e2e8f0; font-size: 12px; font-weight: 600; font-family: sans-serif; }
+  .flow-meta { color: #64748b; font-size: 10px; font-family: sans-serif; margin-top: 2px; }
+  .dots-btn {
+    background: #3d3d50; border-radius: 4px; padding: 4px 8px;
+    color: #94a3b8; font-size: 14px; cursor: pointer;
+    font-family: sans-serif;
+  }
+  .dropdown {
+    background: #2d2d3f; border: 1px solid #4d4d60; border-radius: 6px;
+    padding: 4px; margin-top: 6px; display: inline-block;
+  }
+  .dropdown-item {
+    padding: 6px 12px; color: #e2e8f0; font-size: 11px;
+    border-radius: 4px; font-family: sans-serif; display: block;
+  }
+  .dropdown-item.highlight { background: #3b82d4; color: #fff; }
+
+  /* Arrow annotation */
+  .annotation {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 6px; padding: 8px 12px; margin: 8px 0;
+    font-size: 12px; color: #92400e;
+  }
+  .annotation .icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+  /* Import area mockup */
+  .import-area {
+    background: #1e1e2e; border-radius: 10px; padding: 20px;
+    margin: 10px 0; text-align: center;
+  }
+  .upload-box {
+    border: 2px dashed #4d4d60; border-radius: 8px;
+    padding: 24px; color: #94a3b8;
+    font-size: 12px; font-family: sans-serif;
+  }
+  .upload-box .icon { font-size: 28px; margin-bottom: 8px; color: #7c5cd8; }
+  .upload-box .btn {
+    background: #7c5cd8; color: #fff; border-radius: 6px;
+    padding: 6px 16px; font-size: 12px; margin-top: 10px;
+    display: inline-block; font-family: sans-serif;
+  }
+
+  /* Code */
+  .code {
+    background: #f7f8fa; border: 1px solid #e5e7eb; border-radius: 6px;
+    padding: 10px 14px; font-family: monospace; font-size: 12px;
+    color: #1f2328; margin: 8px 0; word-break: break-all;
+  }
+  .green-text { color: #16a34a; font-weight: 600; }
+  .purple-text { color: #7c5cd8; font-weight: 600; }
+  .orange-text { color: #b45309; }
+
+  /* Checklist */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 6px 0; font-size: 13px; border-bottom: 1px solid #f3f4f6;
+  }
+  .checklist li:last-child { border-bottom: none; }
+  .check { color: #16a34a; font-size: 14px; flex-shrink: 0; }
+
+  /* Success */
+  .success { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-size: 12px; color: #166534; }
+  .info { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-size: 12px; color: #1e40af; }
+  .warn { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-size: 12px; color: #92400e; }
+
+  .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Cara Export &amp; Import Flow SMANU ke Langflow Cloud</h1>
+    <p>Ikuti 3 bagian ini secara berurutan. Estimasi waktu: ~10 menit.</p>
+  </div>
+
+  
+  <div class="progress">
+    <div class="prog-step active">BAGIAN A<br />Export dari Desktop</div>
+    <div class="prog-arrow">→</div>
+    <div class="prog-step">BAGIAN B<br />Import ke Cloud</div>
+    <div class="prog-arrow">→</div>
+    <div class="prog-step">BAGIAN C<br />Ambil URL &amp; Key</div>
+  </div>
+
+  
+  <div class="part-label">
+    <span class="part-badge">BAGIAN A</span>
+    <span class="part-title">Export flow dari Langflow Desktop (laptop kamu)</span>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num">1</div>
+      <div>
+        <div class="step-title">Buka Langflow Desktop di laptop</div>
+        <div class="step-sub">Buka aplikasinya seperti biasa</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Buka <strong>IBM Langflow Desktop</strong> di laptop — pastikan sudah muncul daftar flow kamu.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num">2</div>
+      <div>
+        <div class="step-title">Arahkan kursor ke card flow SMANU</div>
+        <div class="step-sub">Jangan klik untuk membuka — cukup hover</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="mockup">
+        <div class="mockup-title">Langflow Desktop — My Flows</div>
+        <div class="flow-card">
+          <div>
+            <div class="flow-name">SMANU Smart Nutrition for Student</div>
+            <div class="flow-meta">Updated 2 hours ago</div>
+          </div>
+          <div class="dots-btn">⋮</div>
+        </div>
+        <div class="flow-card" style="opacity:0.4">
+          <div>
+            <div class="flow-name">SmartNutrition IBM project</div>
+            <div class="flow-meta">Updated yesterday</div>
+          </div>
+          <div class="dots-btn">⋮</div>
+        </div>
+      </div>
+      <div class="annotation">
+        <span class="icon">👆</span>
+        <span>Klik tombol <strong>⋮</strong> (tiga titik) di pojok kanan card flow <strong>"SMANU Smart Nutrition for Student"</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num">3</div>
+      <div>
+        <div class="step-title">Klik Export dari menu dropdown</div>
+        <div class="step-sub">File .json akan otomatis ter-download</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="mockup">
+        <div class="mockup-title">Menu yang muncul setelah klik ⋮</div>
+        <div class="dropdown">
+          <span class="dropdown-item">Rename</span>
+          <span class="dropdown-item">Duplicate</span>
+          <span class="dropdown-item highlight">⬇ Export</span>
+          <span class="dropdown-item">Delete</span>
+        </div>
+      </div>
+      <div class="annotation">
+        <span class="icon">👆</span>
+        <span>Klik <strong>Export</strong> — browser/sistem akan mendownload file <code>SMANU Smart Nutrition for Student.json</code> ke folder <strong>Downloads</strong> kamu</span>
+      </div>
+      <div class="info">💡 Kalau tidak ada menu ⋮ di card, coba <strong>buka flow-nya dulu</strong>, lalu cari tombol Export di toolbar atas flow (biasanya icon ↓ atau ⋮ di kanan atas).</div>
+    </div>
+  </div>
+
+  
+  <div class="part-label" style="margin-top:24px">
+    <span class="part-badge b">BAGIAN B</span>
+    <span class="part-title">Import file .json ke Langflow Cloud</span>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num purple">4</div>
+      <div>
+        <div class="step-title">Kembali ke halaman utama Langflow Cloud</div>
+        <div class="step-sub">Klik "Back to portal" di pojok kiri atas</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Di browser, kamu sedang di halaman <strong>My Account</strong>. Klik <strong>"← Back to portal"</strong> di pojok kiri atas untuk kembali ke dashboard flow.</p>
+      <div class="annotation">
+        <span class="icon">📍</span>
+        <span>Setelah klik, kamu akan melihat halaman daftar flow (mungkin masih kosong — itu normal)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num purple">5</div>
+      <div>
+        <div class="step-title">Klik tombol untuk membuat/import flow baru</div>
+        <div class="step-sub">Cari tombol + New Flow atau Import</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="mockup">
+        <div class="mockup-title">Langflow Cloud — Dashboard</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="background:#3b82d4;color:#fff;border-radius:6px;padding:6px 14px;font-size:11px;font-family:sans-serif">+ New Flow</div>
+          <div style="background:#2d2d3f;color:#94a3b8;border-radius:6px;padding:6px 14px;font-size:11px;border:1px solid #3d3d50;font-family:sans-serif">⬆ Upload</div>
+        </div>
+        <div style="color:#64748b;font-size:11px;font-family:sans-serif">No flows yet. Create your first flow to get started.</div>
+      </div>
+      <div class="annotation">
+        <span class="icon">👆</span>
+        <span>Klik <strong>"+ New Flow"</strong> lalu cari opsi <strong>"Import from file"</strong> atau langsung klik tombol <strong>"Upload"</strong> / <strong>"Import"</strong> jika ada</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num purple">6</div>
+      <div>
+        <div class="step-title">Upload file .json yang tadi di-download</div>
+        <div class="step-sub">Pilih file dari folder Downloads</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="import-area">
+        <div class="upload-box">
+          <div class="icon">📂</div>
+          <div>Drag &amp; drop your flow file here</div>
+          <div style="color:#4d4d60;margin-top:4px">or</div>
+          <div class="btn">Browse Files</div>
+        </div>
+      </div>
+      <div class="annotation">
+        <span class="icon">👆</span>
+        <span>Klik <strong>Browse Files</strong> → pergi ke folder <strong>Downloads</strong> → pilih file <code>SMANU Smart Nutrition for Student.json</code></span>
+      </div>
+      <div class="success">✅ Flow akan muncul di dashboard Cloud setelah upload berhasil</div>
+    </div>
+  </div>
+
+  
+  <div class="part-label" style="margin-top:24px">
+    <span class="part-badge c">BAGIAN C</span>
+    <span class="part-title">Ambil URL, Flow ID, dan buat API Key</span>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num green">7</div>
+      <div>
+        <div class="step-title">Buka flow yang baru di-import → catat Flow ID dari URL</div>
+        <div class="step-sub">Lihat address bar browser kamu</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Klik flow SMANU yang baru muncul untuk membukanya. Lihat <strong>address bar browser</strong>:</p>
+      <div class="code">
+        https://langflow.datastax.com/flow/<span class="orange-text">xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</span>
+      </div>
+      <div class="annotation">
+        <span class="icon">📋</span>
+        <span>Bagian <span style="color:#b45309;font-family:monospace">xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</span> itu adalah <strong>LANGFLOW_FLOW_ID</strong> baru kamu. <strong>Copy dan simpan.</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num green">8</div>
+      <div>
+        <div class="step-title">Buat API Key baru di Langflow Cloud</div>
+        <div class="step-sub">Beda dari API key Desktop — harus buat baru</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Di Langflow Cloud, klik foto profil / menu akun → <strong>Settings</strong> → <strong>API Keys</strong> → <strong>+ Create new secret key</strong></p>
+      <ul style="font-size:13px;padding-left:18px;margin-bottom:10px">
+        <li>Beri nama: <strong>SMANU Vercel</strong></li>
+        <li>Klik <strong>Create secret key</strong></li>
+        <li>Copy API key yang muncul (<code>sk-xxx...</code>)</li>
+      </ul>
+      <div class="warn">⚠ API key <strong>hanya ditampilkan sekali</strong> — langsung copy dan simpan di Notepad atau tempat aman sebelum tutup dialog!</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num green">9</div>
+      <div>
+        <div class="step-title">Masukkan ke Vercel Environment Variables</div>
+        <div class="step-sub">3 variabel yang harus diisi</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Buka <strong>vercel.com → Project SMANU → Settings → Environment Variables</strong></p>
+      <p>Tambahkan/update 3 variabel ini:</p>
+
+      <div class="code">
+        <span class="purple-text">LANGFLOW_SERVER_URL</span> = <span class="green-text">https://api.langflow.astra.datastax.com</span><br />
+        <span class="purple-text">LANGFLOW_API_KEY</span> = <span class="orange-text">sk-xxx... (yang baru dibuat di Cloud)</span><br />
+        <span class="purple-text">LANGFLOW_FLOW_ID</span> = <span class="orange-text">Flow ID dari URL langkah 7</span>
+      </div>
+
+      <div class="info">💡 <strong>LANGFLOW_SERVER_URL</strong> selalu tetap <code>https://api.langflow.astra.datastax.com</code> — tidak perlu diubah.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-head">
+      <div class="num green">10</div>
+      <div>
+        <div class="step-title">Redeploy di Vercel</div>
+        <div class="step-sub">Wajib agar env vars baru aktif</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Vercel → <strong>Deployments</strong> → klik deployment terbaru → <strong>⋮ → Redeploy</strong></p>
+      <div class="success">✅ Setelah redeploy selesai, coba kirim pesan di <strong>smanu-smart-nutrition.vercel.app/ask-smanu</strong></div>
+    </div>
+  </div>
+
+  
+  <div style="margin-top:20px;background:#f7f8fa;border:1px solid #e5e7eb;border-radius:10px;padding:16px">
+    <p style="font-weight:700;font-size:13px;margin-bottom:12px">✅ Checklist sebelum test</p>
+    <ul class="checklist">
+      <li><span class="check">☐</span> File .json sudah didownload dari Langflow Desktop</li>
+      <li><span class="check">☐</span> File .json sudah di-upload ke Langflow Cloud</li>
+      <li><span class="check">☐</span> Flow ID (dari URL Cloud) sudah dicopy</li>
+      <li><span class="check">☐</span> API Key baru dari Langflow Cloud sudah dibuat dan dicopy</li>
+      <li><span class="check">☐</span> 3 env vars sudah diisi di Vercel Settings</li>
+      <li><span class="check">☐</span> Redeploy di Vercel sudah dilakukan</li>
+    </ul>
+  </div>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>

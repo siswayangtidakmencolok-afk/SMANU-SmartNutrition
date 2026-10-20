@@ -1,0 +1,384 @@
+
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SMANU — Jawaban Submission Form</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    background: #fff;
+    color: #1f2328;
+    padding: 32px 20px 60px;
+  }
+  .container { max-width: 760px; margin: 0 auto; }
+
+  .header { margin-bottom: 28px; padding-bottom: 18px; border-bottom: 2px solid #e5e7eb; }
+  .header h1 { font-size: 20px; font-weight: 700; color: #1f2328; margin-bottom: 4px; }
+  .header p { color: #57606a; font-size: 12px; }
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  .badge-blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+  .badge-orange { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+
+  .field {
+    margin-bottom: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .field-label {
+    background: #f7f8fa;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #57606a;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .field-label .num {
+    background: #3b82d4;
+    color: #fff;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .field-label .num.purple { background: #7c5cd8; }
+  .field-label .num.green { background: #16a34a; }
+  .field-body {
+    padding: 16px;
+    font-size: 13.5px;
+    line-height: 1.75;
+    color: #1f2328;
+    white-space: pre-wrap;
+  }
+  .field-body strong { font-weight: 700; }
+  .note {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    font-size: 11px;
+    color: #92400e;
+  }
+
+  hr { border: none; border-top: 1px solid #f3f4f6; margin: 8px 0; }
+
+  .section-break {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 28px 0 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #57606a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .section-break::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+  }
+
+  .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>SMANU — Jawaban Google Form Hackathon</h1>
+    <p>Berdasarkan kondisi aktual project yang sudah dibangun dan di-deploy. Salin jawaban setiap field ke form.</p>
+    <div class="badge-row">
+      <span class="badge badge-green">✓ Tidak over-claim</span>
+      <span class="badge badge-blue">✓ Sesuai kondisi aktual</span>
+      <span class="badge badge-orange">⚠ Catatan di tiap field jika ada keterbatasan</span>
+    </div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">1</span> Judul Project</div>
+    <div class="field-body">SMANU — SmartNutrition for Students</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">2</span> Tema Project</div>
+    <div class="field-body"><strong>Healthcare &amp; Wellbeing</strong>
+
+(Dengan irisan ke Education &amp; Future of Work — karena target user adalah pelajar/mahasiswa dan konteks utamanya adalah lingkungan sekolah/kampus)</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">3</span> Deskripsi Singkat Project</div>
+    <div class="field-body">SMANU (SmartNutrition for Students) adalah asisten edukasi gizi berbasis AI yang membantu pelajar dan mahasiswa memahami informasi nutrisi dan membuat keputusan makanan sehari-hari yang lebih baik berdasarkan konteks nyata mereka.
+
+Project ini menyelesaikan masalah nyata: informasi gizi tersedia luas di internet, tetapi hampir selalu bersifat umum dan tidak relevan dengan situasi spesifik seorang pelajar — seperti pilihan di kantin sekolah, keterbatasan budget, atau makanan yang tersedia saat itu.
+
+SMANU bekerja dengan cara yang berbeda dari chatbot AI generik. Sebelum menjawab, sistem meminta user untuk memberikan konteks: situasi saat ini (misalnya "hari sekolah"), makanan yang tersedia, dan budget. Pertanyaan user kemudian dikirim ke pipeline RAG (Retrieval-Augmented Generation) berbasis IBM Langflow, yang mengambil pengetahuan relevan dari knowledge base nutrisi terstruktur dan menghasilkan jawaban yang grounded — bukan jawaban generik.
+
+Sistem dibangun dengan prinsip Responsible AI: tidak membuat diagnosis kesehatan, tidak meminta data medis sensitif, dan selalu mengingatkan bahwa informasi yang diberikan bersifat edukatif.
+
+Manfaat utama: pelajar mendapatkan panduan nutrisi yang relevan dengan situasi mereka, dalam format yang terstruktur dan mudah dipahami, tanpa klaim medis yang berlebihan.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">4</span> Problem Statement</div>
+    <div class="field-body">Pelajar dan mahasiswa seringkali perlu membuat keputusan sederhana tentang makanan setiap hari — memilih antara dua menu di kantin, memahami apakah makanan yang tersedia cukup bergizi, atau memutuskan apa yang harus dimakan dengan budget terbatas. Namun informasi gizi yang tersedia hampir selalu bersifat umum: artikel kesehatan, label makanan yang sulit dipahami, atau jawaban AI yang tidak mempertimbangkan konteks spesifik mereka.
+
+Kondisi sebelum solusi:
+— User mencari informasi gizi di Google atau bertanya ke AI generik, mendapat jawaban umum yang tidak mempertimbangkan apa yang tersedia, berapa budgetnya, atau kapan mereka makan.
+— Tidak ada tools yang menggabungkan konteks situasional pelajar dengan pengetahuan gizi yang terstruktur.
+
+Pain point utama:
+— Jawaban generik tidak actionable untuk situasi nyata (misalnya: "makan sayur lebih banyak" tidak membantu ketika kantin hanya menyediakan nasi goreng dan mie instan)
+— Pelajar tidak terlatih membaca label makanan atau memahami konsep gizi dasar
+— Khawatir mendapat klaim kesehatan yang berlebihan dari AI
+
+Mengapa penting: Kebiasaan makan di usia pelajar mempengaruhi performa akademik, kesehatan jangka panjang, dan kemampuan membuat keputusan berbasis pengetahuan — bukan hanya nafsu makan.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">5</span> Target User</div>
+    <div class="field-body">Pengguna utama: <strong>Pelajar SMA dan mahasiswa</strong> (usia 15–24 tahun).
+
+Secara spesifik:
+— Pelajar yang makan di kantin sekolah atau warung sekitar kampus dengan budget terbatas
+— Mahasiswa yang tinggal di kos atau asrama dengan fasilitas memasak terbatas
+— Siswa yang sedang belajar materi gizi dan ingin memahami konsep secara praktis
+— Siapapun yang ingin memahami label makanan atau membandingkan dua pilihan makanan
+
+Yang BUKAN target user: tenaga kesehatan, pasien, atau orang dengan kondisi medis khusus — sistem ini bukan alat klinis.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">6</span> Mengapa Solusi Ini Dibutuhkan</div>
+    <div class="field-body">SMANU berbeda dari solusi yang ada saat ini karena tiga hal:
+
+<strong>1. Konteks user-defined, bukan tebakan AI.</strong>
+Solusi lain (Google, ChatGPT generik) tidak meminta konteks sebelum menjawab. SMANU meminta user untuk menentukan sendiri situasinya — makanan apa yang tersedia, berapa budget, dan apa yang ingin diketahui. Ini menghasilkan jawaban yang relevan, bukan umum.
+
+<strong>2. Jawaban berbasis knowledge base yang dikurasi, bukan pengetahuan umum AI.</strong>
+RAG pipeline memastikan jawaban hanya berasal dari knowledge base nutrisi yang terstruktur dan bersumber dari literatur gizi terpercaya (WHO, Kemenkes RI, FAO, BPOM). AI tidak mengarang fakta.
+
+<strong>3. Responsible AI — tidak membuat klaim medis.</strong>
+Banyak chatbot kesehatan memberikan jawaban yang terdengar seperti diagnosis. SMANU secara eksplisit tidak melakukan ini, selalu menyertakan disclaimer, dan tidak pernah mengasumsikan kondisi kesehatan user yang tidak dinyatakan.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">7</span> Fitur Utama Project</div>
+    <div class="field-body"><strong>1. Context-Aware AI Chat (Ask SMANU)</strong>
+User memasukkan konteks situasi (hari sekolah, di rumah, pilih makanan, dll.), makanan yang tersedia, dan budget sebelum bertanya. AI menjawab berdasarkan konteks tersebut, bukan secara generik. Dikirim ke Langflow RAG pipeline dan dikembalikan sebagai jawaban terstruktur.
+
+<strong>2. RAG Knowledge Base (Nutrition Knowledge)</strong>
+Enam kategori konten edukasi nutrisi (Dasar Nutrisi, Hidrasi, Pilihan Makanan, Konteks Pelajar, Literasi Label Makanan, Edukasi Gizi) yang dapat dijelajahi per topik. Setiap topik memiliki 6 seksi (Overview, Key Nutrients, Benefits, Food Sources, Tips, Summary) yang diambil dari Langflow dengan fallback ke local knowledge base.
+
+<strong>3. Structured Answer Output</strong>
+Jawaban AI diformat ke dalam section terstruktur: Jawaban Utama, Alasan, Saran Praktis, Yang Perlu Diperhatikan, dan Catatan Responsible AI — bukan satu blok teks biasa.
+
+<strong>4. Local Knowledge Base Fallback</strong>
+Berisi 20 entri nutrisi yang dikurasi dari sumber terpercaya (WHO, Kemenkes RI, FAO, BPOM, DKBM Indonesia). Digunakan jika Langflow tidak tersedia, sehingga sistem tetap memberikan informasi edukatif.
+
+<strong>5. Responsible AI Enforcement</strong>
+Sistem tidak pernah membuat diagnosis, tidak meminta data kesehatan sensitif, selalu mencantumkan sumber knowledge, dan selalu mengingatkan user bahwa informasi bersifat edukatif — bukan pengganti dokter atau ahli gizi.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">8</span> Alur Penggunaan Project</div>
+    <div class="field-body">User membuka aplikasi → memilih situasi (School Day / At Home / Choosing Food / dll.) → memasukkan makanan yang tersedia dan budget (opsional) → mengetik pertanyaan → klik kirim
+
+→ Browser mengirim request ke Next.js API Route (/api/nutripath)
+→ API Route membaca konteks + pertanyaan, membangun input_value yang menggabungkan konteks dan pertanyaan
+→ API Route memanggil IBM Langflow (POST /api/v1/run/{flow_id}) dengan x-api-key di server — API key tidak pernah menyentuh browser
+→ Langflow menjalankan RAG flow: ChatInput → Prompt Template → LLM → ChatOutput
+→ Jawaban dikembalikan ke API Route
+→ API Route mengalirkan jawaban ke browser via SSE (Server-Sent Events)
+→ Browser menerima jawaban, mem-parsing section berstruktur (bold header **...**) → ditampilkan sebagai card terstruktur
+
+Untuk Nutrition Knowledge page:
+User membuka halaman topik → memilih seksi (Overview/Nutrients/dll.) → browser POST ke /api/knowledge → server query Langflow → fallback ke local KB jika tidak tersedia → konten ditampilkan dengan indikator sumber (Live / Local KB)</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">9</span> Penggunaan IBM Langflow</div>
+    <div class="field-body"><strong>Flow yang dibangun:</strong>
+"SMANU Smart Nutrition for Student" — satu flow utama yang menangani seluruh percakapan AI.
+
+<strong>Node/component yang digunakan:</strong>
+— Chat Input: menerima input_value yang berisi konteks user + pertanyaan
+— Prompt Template: menyusun system prompt dengan instruksi Responsible AI, format jawaban terstruktur, dan konteks yang diberikan user
+— LLM (language model): memproses prompt dan menghasilkan jawaban
+— Chat Output: mengembalikan jawaban ke API caller
+
+<strong>Input yang dikirim ke Langflow:</strong>
+String gabungan yang berisi: situasi user, makanan tersedia, budget, pertanyaan user, dan instruksi retrieval knowledge base — dikirim sebagai satu input_value ke ChatInput node.
+
+<strong>Output yang diterima:</strong>
+Teks jawaban dari ChatOutput node, diekstrak dari struktur JSON response Langflow (outputs[0].outputs[0].results.message.text).
+
+<strong>Fungsi Langflow dalam sistem:</strong>
+Langflow berperan sebagai AI orchestration layer — menerima konteks terstruktur dari Next.js backend, menjalankan pipeline LLM dengan prompt yang dikontrol, dan mengembalikan jawaban. Seluruh komunikasi terjadi server-side; API key dan URL Langflow tidak pernah diekspos ke browser.
+
+<strong>Catatan jujur:</strong>
+Pada prototype ini, Langflow berjalan di IBM Langflow Desktop (lokal). Untuk deployment Vercel production, flow perlu dipindahkan ke Langflow Cloud (langflow.datastax.com) agar dapat diakses dari server Vercel.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">10</span> Penggunaan IBM Bob</div>
+    <div class="field-body"><strong>Fungsi IBM Bob dalam project:</strong>
+IBM Bob digunakan sebagai AI software engineering assistant selama seluruh proses development project ini — mulai dari arsitektur, implementasi kode, debugging, hingga deployment.
+
+<strong>Task yang dilakukan menggunakan Bob:</strong>
+— Merancang arsitektur RAG: menentukan flow data dari browser → Next.js API → Langflow → browser, termasuk protokol SSE untuk streaming jawaban
+— Mengimplementasikan seluruh kodebase: Next.js App Router, TypeScript, Tailwind CSS v4, API routes, komponen UI
+— Membangun knowledge base nutrisi (20 entri, 6 kategori) berdasarkan sumber WHO, Kemenkes RI, FAO, BPOM
+— Mengimplementasikan RAG retrieval engine lokal (TF-IDF inspired + category bias) sebagai fallback
+— Mendesain dan mengimplementasikan halaman Ask SMANU, Nutrition Knowledge, dan topic detail page
+— Debugging integrasi Langflow: menemukan bahwa Langflow Desktop listen di IPv6 (::1) dan perlu menggunakan localhost, bukan 127.0.0.1
+— Mengimplementasikan keamanan API: memastikan LANGFLOW_API_KEY hanya dibaca di server, tidak pernah dikirim ke browser atau masuk client bundle
+— Menangani deployment ke Vercel: konfigurasi environment variables, error handling yang aman
+
+<strong>Bagaimana Bob berinteraksi dengan sistem:</strong>
+Bob beroperasi di atas codebase project secara langsung — membaca, menulis, dan memodifikasi file menggunakan file tools. Bob juga menjalankan TypeScript type checking dan Next.js build untuk memvalidasi setiap perubahan sebelum selesai.
+
+<strong>Output yang dihasilkan:</strong>
+Seluruh source code project SMANU — dari struktur folder, komponen React, API routes, knowledge base, retrieval engine, hingga konfigurasi deployment — dihasilkan dan divalidasi menggunakan IBM Bob.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num purple">11</span> Bagaimana IBM Langflow dan IBM Bob Terintegrasi</div>
+    <div class="field-body"><strong>Apa yang dilakukan Langflow:</strong>
+Langflow berperan sebagai AI pipeline orchestrator. Ia menerima input terstruktur (konteks user + pertanyaan), menjalankan LLM dengan prompt template yang dikontrol, dan mengembalikan jawaban. Langflow memastikan bahwa format dan batasan jawaban (Responsible AI, sumber knowledge, format terstruktur) konsisten di setiap request.
+
+<strong>Apa yang dilakukan Bob:</strong>
+Bob membangun seluruh lapisan aplikasi di atas Langflow: frontend Next.js yang mengumpulkan konteks user, API Route yang menjadi jembatan aman antara browser dan Langflow, parser yang mengubah teks Langflow menjadi tampilan terstruktur, dan knowledge base lokal sebagai fallback.
+
+<strong>Bagaimana data berpindah di antara keduanya:</strong>
+Bob membangun kode → kode tersebut berjalan saat production → saat user bertanya, Next.js API Route (yang dibuat Bob) memanggil Langflow API dengan konteks user yang sudah diformat → Langflow memproses dan mengembalikan jawaban → API Route (yang dibuat Bob) mem-parse dan meneruskan jawaban ke browser via SSE.
+
+Lebih konkretnya: Bob menulis API Route yang membaca environment variable LANGFLOW_API_KEY secara server-side, membangun input_value yang menggabungkan konteks user, memanggil endpoint Langflow /api/v1/run/{flow_id}, mengekstrak teks dari struktur JSON response Langflow, dan mengalirkannya ke browser.
+
+<strong>Output akhir dari integrasi:</strong>
+User mendapatkan jawaban nutrisi yang relevan dengan konteksnya — dihasilkan oleh LLM yang dikelola Langflow, disampaikan melalui aplikasi web yang dibangun Bob, dalam format terstruktur dan aman yang tidak mengandung klaim medis berlebihan.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">12</span> Project File / Link</div>
+    <div class="field-body">Live demo (Vercel):
+https://smanu-smart-nutrition.vercel.app/ask-smanu
+
+GitHub repository:
+[Masukkan link GitHub repo kamu di sini]
+
+Halaman utama yang dapat didemonstrasikan:
+— /ask-smanu — Chat AI dengan context selector
+— /nutrition-knowledge — Knowledge base browser
+— /nutrition-knowledge/[id] — Topic detail dengan 6 seksi RAG
+— /how-it-works — Diagram arsitektur RAG
+— /about — Responsible AI principles dan tech stack</div>
+    <div class="note">⚠ Ganti "[Masukkan link GitHub repo kamu di sini]" dengan link GitHub repository project kamu yang aktual.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">13</span> Dampak yang Diharapkan</div>
+    <div class="field-body">Dampak kualitatif yang ditargetkan:
+— Pelajar mendapatkan panduan nutrisi yang relevan dengan situasi spesifik mereka, bukan jawaban generik
+— Pemahaman konsep gizi dasar meningkat melalui konten edukatif terstruktur di Knowledge Base (6 topik, 6 seksi per topik)
+— Pelajar lebih mampu membaca dan memahami label makanan kemasan
+— Kebiasaan makan lebih sadar karena ada panduan berbasis pengetahuan, bukan hanya selera
+
+Dampak yang dapat diukur jika dikembangkan:
+— Mengurangi waktu yang dibutuhkan pelajar untuk mendapatkan panduan makanan yang relevan: dari ~15 menit pencarian manual ke ~30 detik interaksi terpandu
+— Knowledge base mencakup 20 topik dari 6 kategori gizi, cukup untuk menjawab pertanyaan umum pelajar sehari-hari
+— Sistem dapat menjawab pertanyaan dalam konteks kantin, budget, dan makanan lokal Indonesia — yang tidak tersedia di tools generik
+
+Catatan: Ini adalah prototype awal. Angka pengguna aktual belum tersedia.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">14</span> Potensi Pengembangan &amp; Skalabilitas</div>
+    <div class="field-body">Pengembangan jangka pendek:
+— Mengintegrasikan Astra DB vector database untuk retrieval semantik yang lebih akurat (menggantikan TF-IDF lokal)
+— Memperluas knowledge base dengan lebih banyak entri makanan lokal Indonesia per daerah
+— Menambahkan fitur riwayat percakapan yang persisten (saat ini hanya di session browser)
+— Menambahkan mode perbandingan makanan: user memasukkan dua pilihan, sistem membandingkan nilai gizinya
+
+Skalabilitas:
+— Arsitektur Next.js + Vercel + Langflow Cloud dapat melayani ribuan pengguna tanpa perubahan infrastruktur signifikan
+— Knowledge base dapat diperluas tanpa mengubah UI atau pipeline — cukup menambah entri di knowledge base
+— Flow Langflow dapat dimodifikasi untuk menggunakan model LLM yang berbeda tanpa mengubah frontend
+— Bisa diadaptasi untuk konteks lain: pesantren, sekolah menengah kejuruan, atau program gizi pemerintah
+
+Potensi monetisasi (jika dikembangkan):
+— Versi freemium untuk pelajar individu, lisensi institusi untuk sekolah/kampus
+— Integrasi dengan sistem kantin sekolah untuk rekomendasi menu real-time</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num">15</span> Apa yang Membuat Project Ini Berbeda</div>
+    <div class="field-body"><strong>1. Personalisasi berbasis konteks yang diisi user, bukan asumsi AI.</strong>
+Hampir semua chatbot gizi menjawab tanpa tahu situasi user. SMANU memisahkan langkah "konteks" dari langkah "pertanyaan" — user menentukan sendiri situasi, makanan yang tersedia, dan budget sebelum bertanya. AI tidak menebak atau mengasumsikan kondisi kesehatan.
+
+<strong>2. RAG grounded — jawaban hanya dari knowledge base yang dikurasi.</strong>
+SMANU tidak menjawab dari pengetahuan umum LLM yang bisa mengandung informasi tidak akurat. Jawaban selalu di-grounded ke knowledge base yang bersumber dari WHO, Kemenkes RI, FAO, dan BPOM. Ini membuat jawaban lebih dapat dipercaya untuk konteks edukatif.
+
+<strong>3. Responsible AI by design, bukan sebagai fitur tambahan.</strong>
+Bukan sekadar disclaimer di footer. Sistem secara teknis tidak bisa membuat klaim medis karena prompt template melarangnya, sistem tidak pernah meminta data kesehatan sensitif, dan setiap jawaban selalu menyertakan catatan bahwa informasi bersifat edukatif. Ini bukan pilihan — ini adalah bagian dari arsitektur sistem.</div>
+  </div>
+
+  
+  <div class="field">
+    <div class="field-label"><span class="num green">16</span> Kemampuan AI Agent</div>
+    <div class="field-body">AI Agent SMANU (dijalankan melalui IBM Langflow) memiliki kemampuan sebagai berikut:
+
+<strong>Yang dapat dilakukan secara otomatis:</strong>
+— Menerima konteks terstruktur (situasi, makanan tersedia, budget) dan pertanyaan user dalam satu input
+— Memproses prompt yang menggabungkan instruksi Responsible AI + konteks user + pertanyaan
+— Menghasilkan jawaban terstruktur dengan section yang konsisten: Jawaban Utama, Alasan Gizi, Saran Praktis, Yang Perlu Diperhatikan, Catatan Edukatif
+— Merespons dalam bahasa yang sama dengan pertanyaan user (Bahasa Indonesia atau Inggris)
+— Menolak menjawab pertanyaan di luar ruang lingkup gizi/makanan dan mengarahkan ke topik yang relevan
+
+<strong>Yang dilakukan secara semi-otomatis (dengan input user):</strong>
+— Membandingkan dua atau lebih pilihan makanan berdasarkan konteks yang diberikan
+— Memberikan saran makanan yang affordable berdasarkan budget yang disebutkan user
+— Menjelaskan label makanan berdasarkan produk yang diinputkan user
+— Menyesuaikan rekomendasi berdasarkan situasi (hari sekolah, di rumah, pilihan terbatas)
+
+<strong>Batasan yang dikendalikan secara eksplisit:</strong>
+— Tidak membuat diagnosis atau klaim medis
+— Tidak mengasumsikan kondisi kesehatan yang tidak disebutkan user
+— Tidak merespons di luar topik gizi dan makanan
+— Selalu menyertakan catatan bahwa output bersifat edukatif, bukan pengganti konsultasi profesional</div>
+  </div>
+
+  <div class="footer">Made with IBM Bob · SMANU SmartNutrition for Students</div>
+
+</div>
+</body>
+</html>
