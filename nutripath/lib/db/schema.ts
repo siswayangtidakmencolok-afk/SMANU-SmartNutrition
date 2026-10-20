@@ -142,6 +142,50 @@ export const foodScanLogs = pgTable("food_scan_logs", {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CANDIDATE FOODS — user-submitted foods not yet in the knowledge base
+//
+// Submitted when vision returns a food not matched in food_items, or when
+// a user manually corrects a scan. Candidates are held for human review
+// before being promoted to food_items. Never used as production nutrition data.
+// ─────────────────────────────────────────────────────────────────────────────
+export const candidateFoods = pgTable("candidate_foods", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+
+  // Submitted name (raw from user or vision model)
+  foodNameRaw: text("food_name_raw").notNull(),
+  // Normalized for deduplication (lowercase, trimmed)
+  foodNameNormalized: text("food_name_normalized").notNull(),
+  foodNameEnglish: text("food_name_english"),
+
+  // Who submitted
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+
+  // Origin
+  submissionSource: text("submission_source").notNull().default("vision_unmatched"),
+
+  // Vision context
+  originalVisionName: text("original_vision_name"),
+  originalConfidence: text("original_confidence"),
+
+  // Optional portion hint (not used in production calculations)
+  suggestedPortionG: real("suggested_portion_g"),
+  suggestedPortionLabel: text("suggested_portion_label"),
+
+  // User notes — for reviewer reference only
+  userNotes: text("user_notes"),
+
+  // Review lifecycle
+  status: text("status").notNull().default("pending"),
+  mergedFoodId: text("merged_food_id").references(() => foodItems.id, { onDelete: "set null" }),
+  reviewerNotes: text("reviewer_notes"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+
+  // Timestamps
+  submittedAt: timestamp("submitted_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Type helpers
 // ─────────────────────────────────────────────────────────────────────────────
 export type User = typeof users.$inferSelect;
@@ -150,3 +194,5 @@ export type FoodItem = typeof foodItems.$inferSelect;
 export type NewFoodItem = typeof foodItems.$inferInsert;
 export type FoodScanLog = typeof foodScanLogs.$inferSelect;
 export type NewFoodScanLog = typeof foodScanLogs.$inferInsert;
+export type CandidateFood = typeof candidateFoods.$inferSelect;
+export type NewCandidateFood = typeof candidateFoods.$inferInsert;
