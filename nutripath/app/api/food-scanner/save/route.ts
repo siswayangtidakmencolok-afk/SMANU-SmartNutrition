@@ -13,6 +13,13 @@
  *   portionLabel:        string,
  *   modelUsed?:          string,
  *   confidenceNote?:     string,
+ *   // Optional: pre-computed nutrition from the client (from /api/food-scanner/nutrition)
+ *   estimatedEnergyKcal?: number | null,
+ *   estimatedProteinG?:   number | null,
+ *   estimatedFatG?:       number | null,
+ *   estimatedCarbG?:      number | null,
+ *   dataSourceUsed?:      string,
+ *   assumptions?:         string,
  * }
  *
  * RESPONSE 200: { id: string }
@@ -23,19 +30,27 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { foodScanLogs } from "@/lib/db/schema";
-import { estimateNutrition } from "@/lib/food-database";
+import { foodScanLogs, foodItems } from "@/lib/db/schema";
+import { getFoodById, estimateNutrition } from "@/lib/food-database";
+import { eq } from "drizzle-orm";
 
 export const runtime = "nodejs";
 
 interface SaveBody {
-  recognizedFoodId?:   string | null;
-  recognizedFoodName:  string;
-  candidatesJson?:     unknown;
-  portionG:            number;
-  portionLabel:        string;
-  modelUsed?:          string;
-  confidenceNote?:     string;
+  recognizedFoodId?:    string | null;
+  recognizedFoodName:   string;
+  candidatesJson?:      unknown;
+  portionG:             number;
+  portionLabel:         string;
+  modelUsed?:           string;
+  confidenceNote?:      string;
+  // Pre-computed values passed from the client (preferred when available)
+  estimatedEnergyKcal?: number | null;
+  estimatedProteinG?:   number | null;
+  estimatedFatG?:       number | null;
+  estimatedCarbG?:      number | null;
+  dataSourceUsed?:      string;
+  assumptions?:         string;
 }
 
 export async function POST(req: NextRequest) {
@@ -54,8 +69,10 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Format request tidak valid." }, { status: 400 });
   }
 
-  const { recognizedFoodId, recognizedFoodName, candidatesJson, portionG, portionLabel,
-          modelUsed, confidenceNote } = body;
+  const {
+    recognizedFoodId, recognizedFoodName, candidatesJson, portionG, portionLabel,
+    modelUsed, confidenceNote,
+  } = body;
 
   if (!recognizedFoodName?.trim()) {
     return Response.json({ error: "recognizedFoodName diperlukan." }, { status: 400 });
@@ -64,16 +81,57 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "portionG harus angka positif (max 5000 g)." }, { status: 400 });
   }
 
-  // 3. Compute nutrition estimate if food is in DB
-  let nutrition: ReturnType<typeof estimateNutrition> = null;
-  let dataSourceUsed: string | undefined;
-  let assumptions: string | undefined;
+  // 3. Resolve nutrition values — prefer client-supplied, then compute server-side
+  let energyKcal: number | null = body.estimatedEnergyKcal ?? null;
+  let proteinG:   number | null = body.estimatedProteinG   ?? null;
+  let fatG:       number | null = body.estimatedFatG       ?? null;
+  let carbG:      number | null = body.estimatedCarbG      ?? null;
+  let dataSourceUsed:  string | undefined = body.dataSourceUsed;
+  let assumptions:     string | undefined = body.assumptions;
 
-  if (recognizedFoodId) {
-    nutrition = estimateNutrition(recognizedFoodId, portionG);
-    if (nutrition) {
-      dataSourceUsed = nutrition.dataSource;
-      assumptions    = nutrition.assumptions;
+  // If nutrition wasn't pre-supplied by client, compute server-side
+  const needsCompute = recognizedFoodId &&
+    energyKcal === null && proteinG === null &&
+    fatG === null && carbG === null;
+
+  if (needsCompute && recognizedFoodId) {
+    const scale = portionG / 100;
+
+    // Try TKPI in-memory first
+    const memFood = getFoodById(recognizedFoodId);
+    if (memFood) {
+      const n = estimateNutrition(recognizedFoodId, portionG);
+      if (n) {
+        energyKcal     = n.energyKcal;
+        proteinG       = n.proteinG;
+        fatG           = n.fatG;
+        carbG          = n.carbG;
+        dataSourceUsed = n.dataSource;
+        assumptions    = n.assumptions;
+      }
+    } else {
+      // Try Neon food_items (USDA-FDC)
+      try {
+        const rows = await db
+          .select()
+          .from(foodItems)
+          .where(eq(foodItems.foodId, recognizedFoodId))
+          .limit(1);
+
+        if (rows.length > 0) {
+          const row = rows[0];
+          energyKcal     = row.energyKcal != null ? Math.round(row.energyKcal * scale) : null;
+          proteinG       = row.proteinG   != null ? Math.round(row.proteinG   * scale * 10) / 10 : null;
+          fatG           = row.fatG       != null ? Math.round(row.fatG       * scale * 10) / 10 : null;
+          carbG          = row.carbG      != null ? Math.round(row.carbG      * scale * 10) / 10 : null;
+          dataSourceUsed = row.dataSource;
+          assumptions    =
+            `Nilai per 100 g dari ${row.dataSource}. Porsi diasumsikan ${portionG} g.`;
+        }
+      } catch (err) {
+        // Non-fatal: save log without nutrition values
+        console.warn("[food-scanner/save] Neon lookup failed:", err instanceof Error ? err.message : err);
+      }
     }
   }
 
@@ -86,10 +144,10 @@ export async function POST(req: NextRequest) {
       candidatesJson:      candidatesJson ?? null,
       portionG,
       portionLabel:        portionLabel?.trim().slice(0, 100) ?? null,
-      estimatedEnergyKcal: nutrition?.energyKcal ?? null,
-      estimatedProteinG:   nutrition?.proteinG   ?? null,
-      estimatedFatG:       nutrition?.fatG       ?? null,
-      estimatedCarbG:      nutrition?.carbG      ?? null,
+      estimatedEnergyKcal: energyKcal ?? null,
+      estimatedProteinG:   proteinG   ?? null,
+      estimatedFatG:       fatG       ?? null,
+      estimatedCarbG:      carbG      ?? null,
       modelUsed:           modelUsed?.slice(0, 100)      ?? "gemini-flash-lite-latest",
       confidenceNote:      confidenceNote?.slice(0, 50)  ?? null,
       dataSourceUsed:      dataSourceUsed                 ?? null,
