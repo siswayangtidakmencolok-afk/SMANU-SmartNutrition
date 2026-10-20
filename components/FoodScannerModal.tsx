@@ -53,6 +53,16 @@ interface Candidate {
   reason: string;
 }
 
+interface AiSections {
+  whatIsIt:         string;
+  composition:      string;
+  nutritionExplain: string;
+  portionContext:   string;
+  variations:       string;
+  sourceLimits:     string;
+  eduSummary:       string;
+}
+
 interface NutritionResult {
   energyKcal:   number | null;
   proteinG:     number | null;
@@ -62,6 +72,7 @@ interface NutritionResult {
   portionG:     number;
   portionLabel: string;
   isEstimate:   boolean;
+  weightIsAiEstimate: boolean;
   /**
    * "database_verified" — value from TKPI-2017 or USDA-FDC
    * "ai_estimate"       — value from Gemini AI fallback (not in any DB)
@@ -72,7 +83,7 @@ interface NutritionResult {
   assumptions:  string;
   foodName:     string;
   // AI-only fields
-  explanation?:  string;
+  sections?:     AiSections;
   energyRange?:  string | null;
   aiDisclaimer?: string;
 }
@@ -271,6 +282,7 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
             foodName:            selectedCandidate!.namePrimary,
             portionG:            g,
             recognitionContext:  selectedCandidate!.reason,
+            weightIsAiEstimate:  false,  // user entered the weight
           }),
         });
 
@@ -283,21 +295,22 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
         const aiData = await explainRes.json() as ExplainApiResponse;
 
         setResult({
-          energyKcal:   aiData.energyKcal,
-          proteinG:     aiData.proteinG,
-          fatG:         aiData.fatG,
-          carbG:        aiData.carbG,
-          fiberG:       aiData.fiberG,
-          portionG:     aiData.portionG,
-          portionLabel: actualPortionLabel,
-          isEstimate:   true,
-          dataStatus:   "ai_estimate",
-          dataSource:   "Estimasi AI",
-          assumptions:  aiData.assumptions,
-          foodName:     aiData.foodName,
-          explanation:  aiData.explanation,
-          energyRange:  aiData.energyRange,
-          aiDisclaimer: aiData.disclaimer,
+          energyKcal:         aiData.energyKcal,
+          proteinG:           aiData.proteinG,
+          fatG:               aiData.fatG,
+          carbG:              aiData.carbG,
+          fiberG:             aiData.fiberG,
+          portionG:           aiData.portionG,
+          portionLabel:       actualPortionLabel,
+          isEstimate:         true,
+          weightIsAiEstimate: aiData.weightIsAiEstimate,
+          dataStatus:         "ai_estimate",
+          dataSource:         "Estimasi AI",
+          assumptions:        aiData.assumptions,
+          foodName:           aiData.foodName,
+          sections:           aiData.sections,
+          energyRange:        aiData.energyRange,
+          aiDisclaimer:       aiData.disclaimer,
         });
         setInsights([]);   // DRI bars not reliable for AI estimates
         setStep("result");
