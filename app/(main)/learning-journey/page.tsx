@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { computeLearningJourney, LearningJourneySummary } from "@/lib/learning-journey-store";
 import { formatRelativeTime } from "@/lib/history-store";
 import { useAuth } from "@/context/AuthContext";
+import { getLevelFromExp } from "@/lib/exp-system";
+import type { LearningProfileResponse } from "@/app/api/user/learning-profile/route";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -224,13 +226,23 @@ function MiniTrendChart({ questScores, challengeScores }: { questScores: number[
 export default function LearningJourneyPage() {
   const { isGuest, isLoading, user } = useAuth();
   const [summary, setSummary] = useState<LearningJourneySummary | null>(null);
-  const [timelineFilter, setTimelineFilter] = useState<"all" | "quest" | "challenge">("all");
+  const [dbProfile, setDbProfile] = useState<LearningProfileResponse | null>(null);
+  const [timelineFilter, setTimelineFilter] = useState<"all" | "quest" | "challenge" | "scan">("all");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setSummary(computeLearningJourney());
   }, []);
+
+  // Fetch DB-backed profile for logged-in users
+  useEffect(() => {
+    if (isGuest || isLoading) return;
+    fetch("/api/user/learning-profile")
+      .then((r) => r.ok ? r.json() as Promise<LearningProfileResponse> : null)
+      .then((data) => { if (data) setDbProfile(data); })
+      .catch(() => { /* non-fatal */ });
+  }, [isGuest, isLoading]);
 
   // Build timeline rows from both result sets
   const timelineItems = useMemo(() => {
@@ -256,7 +268,36 @@ export default function LearningJourneyPage() {
     return [...questItems, ...challengeItems].sort((a, b) => b.time - a.time);
   }, [summary]);
 
-  const filteredTimeline = timelineItems.filter((i) =>
+  // Merge DB activities (scan_save + any DB-recorded quest/challenge) into timeline
+  const dbActivityItems = useMemo(() => {
+    if (!dbProfile) return [];
+    return dbProfile.recentActivities.map((a) => ({
+      type: a.activityType === "scan_save" ? "scan" as const
+          : a.activityType === "quest" ? "quest" as const
+          : "challenge" as const,
+      title: a.activityLabel,
+      subtitle: a.activityType === "scan_save" ? "Scan Makanan"
+              : a.activityType === "quest" ? "Kuis"
+              : "Tantangan",
+      score: a.score ?? 0,
+      time: new Date(a.occurredAt).getTime(),
+      icon: a.activityType === "scan_save" ? "photo_camera"
+          : a.activityType === "quest" ? "quiz"
+          : "lunch_dining",
+      iconBg: a.activityType === "scan_save" ? "bg-purple-100 text-purple-700"
+            : a.activityType === "quest" ? "bg-teal-100 text-teal-700"
+            : "bg-emerald-100 text-emerald-700",
+      fromDb: true,
+    }));
+  }, [dbProfile]);
+
+  // Combined timeline: DB items take precedence (more complete), localStorage fills the rest
+  const allTimelineItems = useMemo(() => {
+    if (dbActivityItems.length > 0) return dbActivityItems;
+    return timelineItems;
+  }, [dbActivityItems, timelineItems]);
+
+  const filteredTimeline = allTimelineItems.filter((i) =>
     timelineFilter === "all" ? true : i.type === timelineFilter
   );
 
@@ -331,7 +372,39 @@ export default function LearningJourneyPage() {
                 </div>
               </div>
 
-              {hasData && summary ? (
+              {/* EXP / Level from DB — shown when available */}
+              {dbProfile ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] text-[#bec6e0]">Level {dbProfile.level}</p>
+                      <p className="text-xs font-bold text-white">{dbProfile.levelTitle}</p>
+                    </div>
+                    <span className="text-lg font-black text-[#6cf8bb]">{dbProfile.totalExp} XP</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-[#bec6e0]">Progress ke Level {dbProfile.level + 1}</span>
+                      <span className="text-[#6cf8bb] font-bold">{dbProfile.progressPct}%</span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
+                      <div
+                        className="h-full bg-[#6cf8bb] rounded-full transition-all"
+                        style={{ width: `${dbProfile.progressPct}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-[#bec6e0] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-[#6cf8bb] shrink-0">check_circle</span>
+                      {dbProfile.totalActivities} aktivitas (DB)
+                    </span>
+                    {dbProfile.expToNext != null && (
+                      <span className="text-[#bec6e0]">{dbProfile.expToNext} XP lagi</span>
+                    )}
+                  </div>
+                </>
+              ) : hasData && summary ? (
                 <>
                   <div className="flex flex-col gap-1">
                     <div className="flex justify-between text-[11px]">

@@ -14,6 +14,7 @@ import {
   ChallengeScore,
 } from "@/lib/food-challenge-data";
 import { saveChallengeResult } from "@/lib/challenge-store";
+import { recordActivity } from "@/lib/record-activity";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Tab = "simulation" | "evaluation" | "comparator";
@@ -411,8 +412,9 @@ export default function FoodChallengePage() {
     setActiveTab("evaluation");
     if (!saved) {
       setSaved(true);
+      const challengeResultId = crypto.randomUUID();
       saveChallengeResult({
-        id: crypto.randomUUID(),
+        id: challengeResultId,
         scenarioId: activeScenario.id,
         scenarioTitle: activeScenario.title,
         score: result.score,
@@ -422,6 +424,15 @@ export default function FoodChallengePage() {
         timestamp: Date.now(),
         relatedDomains: activeScenario.relatedDomains,
         relatedKnowledgeIds: activeScenario.relatedKnowledgeIds,
+      });
+
+      // ── Catat ke DB + beri EXP ────────────────────────────────────
+      recordActivity({
+        activityType:  "challenge",
+        activityLabel: `Food Challenge · ${activeScenario.title}`,
+        sourceRef:     challengeResultId,
+        score:         result.score,
+        domain:        activeScenario.relatedDomains[0],
       });
     }
   }
