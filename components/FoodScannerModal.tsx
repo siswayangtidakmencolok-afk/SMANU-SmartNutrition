@@ -9,31 +9,16 @@
  *  idle → capturing (camera / upload) → analyzing → candidates
  *       → portion → result → [save if logged in] → done
  *
- * CHANGES (v2):
- *  - generateScanInsights() from nutrition-knowledge-engine integrated in result panel.
- *  - DRI % bars shown for each macronutrient.
- *  - "Laporkan makanan" button in result panel for foodId=null foods.
- *  - foodId=null handled gracefully: clear message + candidate submission offer.
- *
  * LIMITATIONS (displayed to user):
  *  - Vision model can ONLY suggest names based on visual appearance.
  *  - Weight, recipe, hidden ingredients cannot be determined from a photo.
- *  - Nutrition values are ESTIMATIONS from TKPI-2017 / USDA-FDC reference data.
+ *  - Nutrition values are ESTIMATIONS from TKPI-2017 reference data.
  *  - Guest users' results are NOT saved to the database.
  */
 
 import { useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { getFoodById, FOOD_DATABASE } from "@/lib/food-database";
-import {
-  generateScanInsights,
-  SCAN_DISCLAIMER,
-  type ScanNutritionSummary,
-  type NutritionInsight,
-} from "@/lib/nutrition-knowledge-engine";
-import type { NutritionApiResponse } from "@/app/api/food-scanner/nutrition/route";
-import type { ExplainApiResponse } from "@/app/api/food-scanner/explain/route";
-import { recordActivity } from "@/lib/record-activity";
+import { getFoodById, estimateNutrition, FOOD_DATABASE } from "@/lib/food-database";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,39 +38,18 @@ interface Candidate {
   reason: string;
 }
 
-interface AiSections {
-  whatIsIt:         string;
-  composition:      string;
-  nutritionExplain: string;
-  portionContext:   string;
-  variations:       string;
-  sourceLimits:     string;
-  eduSummary:       string;
-}
-
 interface NutritionResult {
-  energyKcal:   number | null;
-  proteinG:     number | null;
-  fatG:         number | null;
-  carbG:        number | null;
-  fiberG:       number | null;
-  portionG:     number;
+  energyKcal: number;
+  proteinG:   number;
+  fatG:       number;
+  carbG:      number;
+  fiberG?:    number;
+  portionG:   number;
   portionLabel: string;
-  isEstimate:   boolean;
-  weightIsAiEstimate: boolean;
-  /**
-   * "database_verified" — value from TKPI-2017 or USDA-FDC
-   * "ai_estimate"       — value from Gemini AI fallback (not in any DB)
-   * "unavailable"       — no DB record and AI fallback also failed
-   */
-  dataStatus:   "database_verified" | "ai_estimate" | "unavailable";
-  dataSource:   string;
-  assumptions:  string;
-  foodName:     string;
-  // AI-only fields
-  sections?:     AiSections;
-  energyRange?:  string | null;
-  aiDisclaimer?: string;
+  isEstimate: boolean;
+  dataSource: string;
+  assumptions: string;
+  foodName:    string;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -99,13 +63,6 @@ const CONFIDENCE_COLOR: Record<string, string> = {
   high:   "text-emerald-700 bg-emerald-50 border-emerald-200",
   medium: "text-amber-700 bg-amber-50 border-amber-200",
   low:    "text-slate-600 bg-slate-50 border-slate-200",
-};
-
-const LEVEL_COLOR: Record<string, string> = {
-  "Tinggi":         "bg-emerald-500",
-  "Sedang":         "bg-amber-400",
-  "Rendah":         "bg-slate-300",
-  "Tidak diketahui": "bg-slate-200",
 };
 
 function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
@@ -143,13 +100,9 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
   const [portionLabel, setPortionLabel]   = useState<string>("");
   const [customPortion, setCustomPortion] = useState<string>("");
   const [result, setResult]               = useState<NutritionResult | null>(null);
-  const [insights, setInsights]           = useState<NutritionInsight[]>([]);
   const [error, setError]                 = useState<string>("");
-  const [calculatingNutrition, setCalcNutrition] = useState(false);
   const [saving, setSaving]               = useState(false);
   const [savedId, setSavedId]             = useState<string>("");
-  const [reportingCandidate, setReportingCandidate] = useState(false);
-  const [candidateReported, setCandidateReported]   = useState(false);
 
   const fileInputRef   = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -218,51 +171,24 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
 
   // ── Candidate selection ──────────────────────────────────────────────────────
 
-  async function handleSelectCandidate(c: Candidate) {
+  function handleSelectCandidate(c: Candidate) {
     setSelectedCandidate(c);
-    setCandidateReported(false);
-    setCustomPortion("");
-
-    // Pre-fill default portion.
-    // TKPI foods have typicalPortionG in-memory; USDA foods need an API call.
-    const memFood = c.foodId ? getFoodById(c.foodId) : null;
-    if (memFood) {
-      setPortionG(memFood.typicalPortionG);
-      setPortionLabel(memFood.typicalPortionLabel);
-    } else if (c.foodId) {
-      // USDA record — fetch typical portion from server
-      try {
-        const res = await fetch(
-          `/api/food-scanner/nutrition?foodId=${encodeURIComponent(c.foodId)}&portionG=100`
-        );
-        if (res.ok) {
-          const data = await res.json() as NutritionApiResponse;
-          if (data.typicalPortionG) {
-            setPortionG(data.typicalPortionG);
-            setPortionLabel(data.typicalPortionLabel ?? `${data.typicalPortionG} g`);
-          } else {
-            setPortionG(100);
-            setPortionLabel("perkiraan 100 g");
-          }
-        } else {
-          setPortionG(100);
-          setPortionLabel("perkiraan 100 g");
-        }
-      } catch {
-        setPortionG(100);
-        setPortionLabel("perkiraan 100 g");
-      }
+    // Pre-fill default portion from DB if available
+    const food = c.foodId ? getFoodById(c.foodId) : null;
+    if (food) {
+      setPortionG(food.typicalPortionG);
+      setPortionLabel(food.typicalPortionLabel);
     } else {
       setPortionG(100);
       setPortionLabel("perkiraan 100 g");
     }
-
+    setCustomPortion("");
     setStep("portion");
   }
 
   // ── Portion confirmation ────────────────────────────────────────────────────
 
-  async function handleConfirmPortion() {
+  function handleConfirmPortion() {
     if (!selectedCandidate) return;
     const g = customPortion ? parseFloat(customPortion) : portionG;
     if (!g || g <= 0 || g > 5000) {
@@ -270,151 +196,32 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
       return;
     }
     setError("");
-    const actualPortionLabel = customPortion ? `${g} g (dimasukkan manual)` : portionLabel;
 
-    // ── Helper: call AI fallback ───────────────────────────────────────────
-    async function fetchAiFallback(): Promise<boolean> {
-      try {
-        const explainRes = await fetch("/api/food-scanner/explain", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            foodName:            selectedCandidate!.namePrimary,
-            portionG:            g,
-            recognitionContext:  selectedCandidate!.reason,
-            weightIsAiEstimate:  false,  // user entered the weight
-          }),
-        });
+    const food = selectedCandidate.foodId ? getFoodById(selectedCandidate.foodId) : null;
+    const nutrition = food ? estimateNutrition(selectedCandidate.foodId!, g) : null;
 
-        if (!explainRes.ok) {
-          const errJson = await explainRes.json().catch(() => ({ error: explainRes.statusText })) as { error?: string };
-          setError(errJson.error ?? "Estimasi AI gagal. Coba lagi atau pilih makanan lain.");
-          return false;
-        }
-
-        const aiData = await explainRes.json() as ExplainApiResponse;
-
-        setResult({
-          energyKcal:         aiData.energyKcal,
-          proteinG:           aiData.proteinG,
-          fatG:               aiData.fatG,
-          carbG:              aiData.carbG,
-          fiberG:             aiData.fiberG,
-          portionG:           aiData.portionG,
-          portionLabel:       actualPortionLabel,
-          isEstimate:         true,
-          weightIsAiEstimate: aiData.weightIsAiEstimate,
-          dataStatus:         "ai_estimate",
-          dataSource:         "Estimasi AI",
-          assumptions:        aiData.assumptions,
-          foodName:           aiData.foodName,
-          sections:           aiData.sections,
-          energyRange:        aiData.energyRange,
-          aiDisclaimer:       aiData.disclaimer,
-        });
-        setInsights([]);   // DRI bars not reliable for AI estimates
-        setStep("result");
-        return true;
-      } catch {
-        setError("Tidak dapat menghubungi server AI. Coba lagi.");
-        return false;
-      }
-    }
-
-    // ── Path A: No foodId — go straight to AI fallback ────────────────────
-    if (!selectedCandidate.foodId) {
-      setCalcNutrition(true);
-      await fetchAiFallback();
-      setCalcNutrition(false);
-      return;
-    }
-
-    // ── Path B: Try DB first, then AI fallback on 404 ─────────────────────
-    setCalcNutrition(true);
-    try {
-      const res = await fetch(
-        `/api/food-scanner/nutrition?foodId=${encodeURIComponent(selectedCandidate.foodId)}&portionG=${g}`
-      );
-
-      if (res.status === 404) {
-        // foodId returned by scanner not found in DB on recheck — try AI fallback
-        await fetchAiFallback();
-        return;
-      }
-
-      if (!res.ok) {
-        setError("Gagal mengambil data nutrisi. Coba lagi.");
-        return;
-      }
-
-      const data = await res.json() as NutritionApiResponse;
-
-      const newResult: NutritionResult = {
-        energyKcal:         data.energyKcal,
-        proteinG:           data.proteinG,
-        fatG:               data.fatG,
-        carbG:              data.carbG,
-        fiberG:             data.fiberG,
-        portionG:           data.portionG,
-        portionLabel:       actualPortionLabel,
-        isEstimate:         data.isEstimate,
-        weightIsAiEstimate: false,
-        dataStatus:         "database_verified",
-        dataSource:         data.dataSource,
-        assumptions:        data.assumptions,
-        foodName:           selectedCandidate.namePrimary,
-      };
-      setResult(newResult);
-
-      // Generate educational insights — generateScanInsights safely handles nulls
-      const summary: ScanNutritionSummary = {
+    if (!nutrition) {
+      // Food not in DB — show limited result
+      setResult({
+        energyKcal:   0,
+        proteinG:     0,
+        fatG:         0,
+        carbG:        0,
+        portionG:     g,
+        portionLabel: customPortion ? `${g} g (dimasukkan manual)` : portionLabel,
+        isEstimate:   true,
+        dataSource:   "—",
+        assumptions:  "Makanan ini belum tersedia dalam database gizi SMANU. Informasi nutrisi tidak dapat dihitung.",
         foodName:     selectedCandidate.namePrimary,
-        portionG:     data.portionG,
-        portionLabel: actualPortionLabel,
-        energyKcal:   data.energyKcal,
-        proteinG:     data.proteinG,
-        fatG:         data.fatG,
-        carbG:        data.carbG,
-        fiberG:       data.fiberG,
-        dataSource:   data.dataSource,
-        isEstimate:   data.isEstimate,
-        assumptions:  data.assumptions,
-      };
-      setInsights(generateScanInsights(summary));
-      setStep("result");
-    } catch {
-      setError("Tidak dapat menghubungi server. Coba lagi.");
-    } finally {
-      setCalcNutrition(false);
-    }
-  }
-
-  // ── Report unknown food (candidate submission) ────────────────────────────
-
-  async function handleReportUnknown() {
-    if (!selectedCandidate || reportingCandidate || candidateReported) return;
-    setReportingCandidate(true);
-    try {
-      const res = await fetch("/api/food-scanner/candidate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          foodNameRaw:        selectedCandidate.namePrimary,
-          submissionSource:   "vision_unmatched",
-          originalVisionName: selectedCandidate.namePrimary,
-          originalConfidence: selectedCandidate.confidence,
-        }),
       });
-      if (res.ok) {
-        setCandidateReported(true);
-      } else {
-        setError("Gagal melaporkan makanan. Coba lagi.");
-      }
-    } catch {
-      setError("Tidak dapat menghubungi server.");
-    } finally {
-      setReportingCandidate(false);
+    } else {
+      setResult({
+        ...nutrition,
+        portionLabel: customPortion ? `${g} g (dimasukkan manual)` : portionLabel,
+        foodName:     selectedCandidate.namePrimary,
+      });
     }
+    setStep("result");
   }
 
   // ── Save result ──────────────────────────────────────────────────────────────
@@ -428,43 +235,21 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          recognizedFoodId:    selectedCandidate.foodId,
-          recognizedFoodName:  result.foodName,
-          candidatesJson:      candidates,
-          portionG:            result.portionG,
-          portionLabel:        result.portionLabel,
-          confidenceNote:      selectedCandidate.confidence,
-          modelUsed:           "gemini-flash-lite-latest",
-          // Pre-computed nutrition — no server re-query needed
-          estimatedEnergyKcal: result.energyKcal,
-          estimatedProteinG:   result.proteinG,
-          estimatedFatG:       result.fatG,
-          estimatedCarbG:      result.carbG,
-          estimatedFiberG:     result.fiberG,
-          dataSourceUsed:      result.dataStatus !== "unavailable" ? result.dataSource : undefined,
-          dataStatus:          result.dataStatus,
-          energyRange:         result.energyRange ?? undefined,
-          assumptions:         result.assumptions,
-          // AI explanation blob — persisted for history re-render
-          explanationJson:     result.sections ?? undefined,
+          recognizedFoodId:   selectedCandidate.foodId,
+          recognizedFoodName: result.foodName,
+          candidatesJson:     candidates,
+          portionG:           result.portionG,
+          portionLabel:       result.portionLabel,
+          confidenceNote:     selectedCandidate.confidence,
+          modelUsed:          "gemini-flash-lite-latest",
         }),
       });
       const json = await res.json() as { id?: string; error?: string };
       if (!res.ok || json.error) {
         setError(json.error ?? "Gagal menyimpan.");
       } else {
-        const scanLogId = json.id ?? "";
-        setSavedId(scanLogId);
+        setSavedId(json.id ?? "");
         setStep("done");
-
-        // ── Catat scan_save ke DB + beri EXP (fire-and-forget) ────────────
-        if (scanLogId) {
-          recordActivity({
-            activityType:  "scan_save",
-            activityLabel: `Scan Makanan · ${result.foodName}`,
-            sourceRef:     scanLogId,
-          });
-        }
       }
     } catch {
       setError("Tidak dapat menghubungi server.");
@@ -481,10 +266,8 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
     setCandidates([]);
     setSelectedCandidate(null);
     setResult(null);
-    setInsights([]);
     setError("");
     setSavedId("");
-    setCandidateReported(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (cameraInputRef.current) cameraInputRef.current.value = "";
   }
@@ -719,11 +502,6 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
                 <div>
                   <p className="text-xs text-slate-500">Makanan dipilih:</p>
                   <p className="text-sm font-bold text-slate-800">{selectedCandidate.namePrimary}</p>
-                  {!selectedCandidate.foodId && (
-                    <p className="text-[10px] text-blue-600 mt-0.5">
-                      Tidak ada di database — AI akan memperkirakan nutrisi.
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -781,17 +559,10 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
 
               <button
                 onClick={handleConfirmPortion}
-                disabled={calculatingNutrition}
-                className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2"
               >
-                {calculatingNutrition ? (
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <span className="material-symbols-outlined text-[18px]">calculate</span>
-                )}
-                {calculatingNutrition
-                  ? (selectedCandidate.foodId ? "Mengambil data nutrisi…" : "AI memperkirakan nutrisi…")
-                  : "Hitung Estimasi Nutrisi"}
+                <span className="material-symbols-outlined text-[18px]">calculate</span>
+                Hitung Estimasi Nutrisi
               </button>
             </div>
           )}
@@ -808,138 +579,64 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
                 </div>
               </div>
 
-              {result.dataStatus === "unavailable" ? (
-                /* ── Truly unavailable (AI also failed / was not attempted) ── */
-                <div className="flex flex-col gap-3">
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-slate-400 text-[20px]">help_outline</span>
-                      <p className="text-sm font-semibold text-slate-700">Informasi nutrisi tidak tersedia</p>
-                    </div>
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      <strong>{result.foodName}</strong> tidak ditemukan di database dan estimasi AI juga
-                      tidak tersedia saat ini. Kamu bisa melaporkannya untuk ditambahkan.
-                    </p>
-                  </div>
-                  {!candidateReported ? (
-                    <button
-                      onClick={handleReportUnknown}
-                      disabled={reportingCandidate}
-                      className="py-2.5 px-4 rounded-xl border border-[#006c49] text-[#006c49] text-sm font-semibold hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
-                    >
-                      {reportingCandidate
-                        ? <span className="w-4 h-4 border-2 border-[#006c49] border-t-transparent rounded-full animate-spin" />
-                        : <span className="material-symbols-outlined text-[18px]">add_circle</span>}
-                      {reportingCandidate ? "Melaporkan…" : "Laporkan Makanan Ini"}
-                    </button>
-                  ) : (
-                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-emerald-600 text-[18px]">check_circle</span>
-                      <p className="text-xs text-emerald-700 font-medium">Laporan diterima. Terima kasih!</p>
-                    </div>
-                  )}
+              {result.dataSource === "—" ? (
+                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">
+                  Makanan ini belum tersedia dalam database gizi SMANU.<br />
+                  Nilai nutrisi tidak dapat dihitung untuk saat ini.
                 </div>
-
-              ) : result.dataStatus === "ai_estimate" ? (
-                /* ── AI Estimate result — full 7-section report ─────────── */
-                <AiEstimatePanel result={result} candidateReported={candidateReported} reportingCandidate={reportingCandidate} onReportUnknown={handleReportUnknown} />
-
               ) : (
-                /* ── Database-verified result — macros + DRI bars ───────── */
-                <div className="flex flex-col gap-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <NutrientTile
-                      label="Energi"
-                      value={result.energyKcal != null ? `${result.energyKcal} kkal` : "—"}
-                      accent="emerald"
-                      unavailable={result.energyKcal == null}
-                    />
-                    <NutrientTile
-                      label="Protein"
-                      value={result.proteinG != null ? `${result.proteinG} g` : "—"}
-                      accent="blue"
-                      unavailable={result.proteinG == null}
-                    />
-                    <NutrientTile
-                      label="Lemak"
-                      value={result.fatG != null ? `${result.fatG} g` : "—"}
-                      accent="orange"
-                      unavailable={result.fatG == null}
-                    />
-                    <NutrientTile
-                      label="Karbohidrat"
-                      value={result.carbG != null ? `${result.carbG} g` : "—"}
-                      accent="violet"
-                      unavailable={result.carbG == null}
-                    />
-                    {result.fiberG != null && (
-                      <NutrientTile label="Serat" value={`${result.fiberG} g`} accent="slate" />
-                    )}
-                  </div>
-                  {(result.energyKcal == null || result.proteinG == null ||
-                    result.fatG == null || result.carbG == null) && (
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
-                      "—" menunjukkan data tidak tersedia dalam sumber {result.dataSource}.
-                      USDA Foundation Foods mengukur nutrisi secara selektif.
-                    </p>
-                  )}
-                  {insights.length > 0 && (
-                    <div className="flex flex-col gap-0">
-                      <p className="text-[11px] font-semibold text-slate-600 mb-1.5">
-                        Kontribusi terhadap kebutuhan harian (AKG remaja ~15 th):
-                      </p>
-                      <div className="flex flex-col gap-2">
-                        {insights.map((ins) => (
-                          <InsightBar key={ins.nutrient} insight={ins} />
-                        ))}
-                      </div>
-                    </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <NutrientTile label="Energi" value={`${result.energyKcal} kkal`} accent="emerald" />
+                  <NutrientTile label="Protein" value={`${result.proteinG} g`} accent="blue" />
+                  <NutrientTile label="Lemak" value={`${result.fatG} g`} accent="orange" />
+                  <NutrientTile label="Karbohidrat" value={`${result.carbG} g`} accent="violet" />
+                  {result.fiberG != null && (
+                    <NutrientTile label="Serat" value={`${result.fiberG} g`} accent="slate" />
                   )}
                 </div>
               )}
 
-              {/* Assumptions & data source — shown for database + ai_estimate, not unavailable */}
-              {result.dataStatus !== "unavailable" && (
-                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-col gap-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-amber-500 text-[15px]">info</span>
-                    <p className="text-[11px] font-semibold text-amber-800">Asumsi &amp; Sumber Data</p>
-                  </div>
-                  <p className="text-[11px] text-amber-700 leading-relaxed">{result.assumptions}</p>
-                  {result.dataStatus === "database_verified" && (
-                    <p className="text-[10px] text-amber-600 font-medium">
-                      Sumber: {result.dataSource === "TKPI-2017"
-                        ? "Tabel Komposisi Pangan Indonesia 2017, Kemenkes RI"
-                        : result.dataSource === "USDA-FDC"
-                        ? "USDA FoodData Central (Foundation Foods)"
-                        : result.dataSource}
-                    </p>
-                  )}
+              {/* Assumptions & data source */}
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-col gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-amber-500 text-[15px]">info</span>
+                  <p className="text-[11px] font-semibold text-amber-800">Asumsi & Sumber Data</p>
                 </div>
-              )}
-
-              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-[10px] text-slate-500 leading-relaxed text-center">
-                {SCAN_DISCLAIMER}
+                <p className="text-[11px] text-amber-700 leading-relaxed">{result.assumptions}</p>
+                {result.dataSource !== "—" && (
+                  <p className="text-[10px] text-amber-600 font-medium">
+                    Sumber: {result.dataSource === "TKPI-2017"
+                      ? "Tabel Komposisi Pangan Indonesia 2017, Kemenkes RI"
+                      : result.dataSource === "USDA-FDC"
+                      ? "USDA FoodData Central (SR Legacy)"
+                      : "Estimasi — tidak ada data terverifikasi"}
+                  </p>
+                )}
               </div>
 
-              {/* Save / guest notice — available for both database and ai_estimate results */}
-              {result.dataStatus !== "unavailable" && (
-                isLoggedIn ? (
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
-                  >
-                    {saving
-                      ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      : <span className="material-symbols-outlined text-[18px]">bookmark</span>}
-                    {saving ? "Menyimpan…" : "Simpan ke Riwayat"}
-                  </button>
-                ) : (
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">
-                    <span className="font-medium text-slate-700">Login</span> untuk menyimpan hasil scan ke riwayatmu.
-                  </div>
-                )
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-[10px] text-slate-500 leading-relaxed text-center">
+                Nilai ini adalah <strong>estimasi edukatif</strong>, bukan pengukuran aktual.
+                Tidak dapat digunakan untuk diagnosis atau pengelolaan kondisi medis.
+              </div>
+
+              {/* Save / guest notice */}
+              {isLoggedIn ? (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="py-2.5 px-4 rounded-xl bg-[#006c49] text-white text-sm font-semibold hover:bg-[#005a3c] transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {saving ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                  )}
+                  {saving ? "Menyimpan…" : "Simpan ke Riwayat"}
+                </button>
+              ) : (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-500 text-center">
+                  <span className="font-medium text-slate-700">Login</span> untuk menyimpan hasil scan ke riwayatmu.
+                </div>
               )}
 
               <button
@@ -959,19 +656,11 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
               </div>
               <p className="text-sm font-bold text-slate-800">Tersimpan!</p>
               <p className="text-xs text-slate-400 text-center">
-                Hasil scan telah disimpan ke riwayat akun kamu.
+                Hasil scan telah disimpan ke riwayatmu.{savedId && ` (ID: ${savedId.slice(0, 8)}…)`}
               </p>
-              <a
-                href="/scan-history"
-                onClick={onClose}
-                className="px-4 py-2 rounded-lg bg-[#006c49] text-white text-xs font-semibold hover:bg-[#005a3c] transition-colors flex items-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-[15px]">history</span>
-                Lihat Riwayat Scan
-              </a>
               <button
                 onClick={handleReset}
-                className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors"
+                className="px-4 py-2 rounded-lg bg-[#006c49] text-white text-xs font-semibold hover:bg-[#005a3c] transition-colors"
               >
                 Scan Makanan Lain
               </button>
@@ -988,290 +677,82 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-const ACCENT_MAP: Record<string, string> = {
-  emerald: "bg-emerald-50 border-emerald-100 text-emerald-800",
-  blue:    "bg-blue-50 border-blue-100 text-blue-800",
-  orange:  "bg-orange-50 border-orange-100 text-orange-800",
-  violet:  "bg-violet-50 border-violet-100 text-violet-800",
-  slate:   "bg-slate-50 border-slate-200 text-slate-700",
-};
-
 function NutrientTile({
   label,
   value,
   accent,
-  unavailable = false,
-  isAiEstimate = false,
 }: {
-  label:          string;
-  value:          string;
-  accent:         string;
-  unavailable?:   boolean;
-  isAiEstimate?:  boolean;
+  label: string;
+  value: string;
+  accent: "emerald" | "blue" | "orange" | "violet" | "slate";
 }) {
-  const cls = unavailable
-    ? "bg-slate-50 border-slate-200 text-slate-400"
-    : (ACCENT_MAP[accent] ?? ACCENT_MAP.slate);
+  const colors: Record<string, string> = {
+    emerald: "bg-emerald-50 border-emerald-200 text-emerald-800",
+    blue:    "bg-blue-50 border-blue-200 text-blue-800",
+    orange:  "bg-orange-50 border-orange-200 text-orange-800",
+    violet:  "bg-violet-50 border-violet-200 text-violet-800",
+    slate:   "bg-slate-50 border-slate-200 text-slate-700",
+  };
   return (
-    <div className={`rounded-xl border p-3 flex flex-col gap-0.5 ${cls}`}>
-      <div className="flex items-center justify-between gap-1">
-        <p className="text-[10px] font-medium opacity-70">{label}</p>
-        {isAiEstimate && !unavailable && (
-          <span className="text-[9px] px-1 py-0.5 rounded bg-blue-100 text-blue-600 font-semibold leading-none shrink-0">AI</span>
-        )}
-      </div>
-      <p className={`text-base font-bold leading-tight ${unavailable ? "text-slate-300" : ""}`}>
-        {value}
-      </p>
+    <div className={`flex flex-col gap-0.5 p-3 rounded-xl border ${colors[accent]}`}>
+      <p className="text-[10px] font-medium opacity-70">{label}</p>
+      <p className="text-lg font-bold leading-tight">{value}</p>
     </div>
   );
 }
 
-// ── AiEstimatePanel — full 7-section AI result display ───────────────────────
-
-function AiEstimatePanel({
-  result,
-  candidateReported,
-  reportingCandidate,
-  onReportUnknown,
-}: {
-  result: NutritionResult;
-  candidateReported: boolean;
-  reportingCandidate: boolean;
-  onReportUnknown: () => void;
-}) {
-  const [expandedSection, setExpandedSection] = useState<string | null>("whatIsIt");
-
-  const SECTION_META: { key: keyof AiSections; label: string; icon: string }[] = [
-    { key: "whatIsIt",         label: "Pengertian Makanan",         icon: "menu_book" },
-    { key: "composition",      label: "Komposisi & Bahan",          icon: "category" },
-    { key: "nutritionExplain", label: "Penjelasan Nutrisi",         icon: "science" },
-    { key: "portionContext",   label: "Konteks Porsi & Berat",      icon: "monitor_weight" },
-    { key: "variations",       label: "Variasi & Ketidakpastian",   icon: "shuffle" },
-    { key: "sourceLimits",     label: "Sumber & Keterbatasan",      icon: "info" },
-    { key: "eduSummary",       label: "Kesimpulan Edukatif",        icon: "lightbulb" },
-  ];
-
-  return (
-    <div className="flex flex-col gap-3">
-      {/* Status badge */}
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
-        <span className="material-symbols-outlined text-blue-500 text-[16px]">smart_toy</span>
-        <p className="text-[11px] text-blue-700 font-semibold">Estimasi AI — perlu verifikasi</p>
-        {result.weightIsAiEstimate && (
-          <span className="ml-auto text-[10px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-semibold">
-            Berat estimasi AI
-          </span>
-        )}
-      </div>
-
-      {/* Macro grid */}
-      <div className="grid grid-cols-2 gap-2">
-        <NutrientTile
-          label="Energi"
-          value={
-            result.energyKcal != null ? `~${result.energyKcal} kkal`
-            : result.energyRange ? result.energyRange
-            : "—"
-          }
-          accent="emerald"
-          unavailable={result.energyKcal == null && !result.energyRange}
-          isAiEstimate
-        />
-        <NutrientTile
-          label="Protein"
-          value={result.proteinG != null ? `~${result.proteinG} g` : "—"}
-          accent="blue"
-          unavailable={result.proteinG == null}
-          isAiEstimate
-        />
-        <NutrientTile
-          label="Lemak"
-          value={result.fatG != null ? `~${result.fatG} g` : "—"}
-          accent="orange"
-          unavailable={result.fatG == null}
-          isAiEstimate
-        />
-        <NutrientTile
-          label="Karbohidrat"
-          value={result.carbG != null ? `~${result.carbG} g` : "—"}
-          accent="violet"
-          unavailable={result.carbG == null}
-          isAiEstimate
-        />
-        {result.fiberG != null && (
-          <NutrientTile label="Serat" value={`~${result.fiberG} g`} accent="slate" isAiEstimate />
-        )}
-      </div>
-
-      {/* 7-section accordion — only rendered when sections are available */}
-      {result.sections && (
-        <div className="flex flex-col gap-1.5">
-          <p className="text-[11px] font-semibold text-slate-600">Laporan mendalam AI:</p>
-          {SECTION_META.map(({ key, label, icon }) => {
-            const text = result.sections![key];
-            const isOpen = expandedSection === key;
-            return (
-              <div key={key} className="rounded-xl border border-slate-200 overflow-hidden">
-                <button
-                  onClick={() => setExpandedSection(isOpen ? null : key)}
-                  className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-white hover:bg-slate-50 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="material-symbols-outlined text-[15px] text-[#006c49] shrink-0">{icon}</span>
-                    <span className="text-[11px] font-semibold text-slate-700 truncate">{label}</span>
-                  </div>
-                  <span className={`material-symbols-outlined text-[16px] text-slate-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`}>
-                    expand_more
-                  </span>
-                </button>
-                {isOpen && (
-                  <div className="px-4 pb-3 pt-1 bg-slate-50 border-t border-slate-100">
-                    <p className="text-[11px] text-slate-600 leading-relaxed">{text}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Source limitation box */}
-      {result.aiDisclaimer && (
-        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-amber-500 text-[14px]">warning</span>
-            <p className="text-[11px] font-semibold text-amber-800">Sumber &amp; Keterbatasan</p>
-          </div>
-          <p className="text-[11px] text-amber-700 leading-relaxed">{result.aiDisclaimer}</p>
-        </div>
-      )}
-
-      {/* Report button */}
-      {!candidateReported ? (
-        <button
-          onClick={onReportUnknown}
-          disabled={reportingCandidate}
-          className="py-2 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
-        >
-          {reportingCandidate
-            ? <span className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-            : <span className="material-symbols-outlined text-[15px]">add_circle</span>}
-          {reportingCandidate ? "Melaporkan…" : "Laporkan agar ditambahkan ke database"}
-        </button>
-      ) : (
-        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
-          <span className="material-symbols-outlined text-emerald-600 text-[15px]">check_circle</span>
-          <p className="text-xs text-emerald-700">Laporan diterima. Terima kasih!</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * DRI insight bar — shows nutrient name, insight text, and a progress bar.
- */
-function InsightBar({ insight }: { insight: NutritionInsight }) {
-  const barWidth = insight.driPct !== null ? Math.min(insight.driPct, 100) : 0;
-  const barColor = LEVEL_COLOR[insight.level] ?? "bg-slate-300";
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold text-slate-700">{insight.nutrient}</p>
-        <span className="text-[10px] text-slate-400 shrink-0">
-          {insight.driPct !== null ? `${insight.driPct}% AKG` : "—"}
-        </span>
-      </div>
-      {/* Progress bar */}
-      <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all ${barColor}`}
-          style={{ width: `${barWidth}%` }}
-        />
-      </div>
-      <p className="text-[10px] text-slate-500 leading-relaxed">{insight.insight}</p>
-    </div>
-  );
-}
-
+/** Simple text-based fallback search when vision candidates don't match. */
 function ManualFoodSearch({ onSelect }: { onSelect: (c: Candidate) => void }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<typeof FOOD_DATABASE>([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]   = useState(false);
 
-  function handleSearch(q: string) {
-    setQuery(q);
-    if (q.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    const lower = q.toLowerCase();
-    setResults(
-      FOOD_DATABASE.filter(
+  const results = query.trim().length >= 2
+    ? FOOD_DATABASE.filter(
         (f) =>
-          f.namePrimary.toLowerCase().includes(lower) ||
-          f.nameAliases.some((a) => a.toLowerCase().includes(lower))
-      ).slice(0, 6)
-    );
-  }
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 text-xs text-[#006c49] font-medium self-start"
-      >
-        <span className="material-symbols-outlined text-[15px]">search</span>
-        Cari makanan secara manual
-      </button>
-    );
-  }
+          f.namePrimary.toLowerCase().includes(query.toLowerCase()) ||
+          f.nameAliases.some((a) => a.toLowerCase().includes(query.toLowerCase()))
+      ).slice(0, 5)
+    : [];
 
   return (
-    <div className="flex flex-col gap-2 border border-slate-200 rounded-xl p-3">
-      <p className="text-xs font-semibold text-slate-700">Cari nama makanan:</p>
-      <input
-        autoFocus
-        type="text"
-        placeholder="mis. nasi putih, tempe goreng…"
-        value={query}
-        onChange={(e) => handleSearch(e.target.value)}
-        className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#006c49] focus:ring-2 focus:ring-[#006c49]/20"
-      />
-      {results.length > 0 && (
-        <div className="flex flex-col gap-1">
-          {results.map((f) => (
-            <button
-              key={f.foodId}
-              onClick={() =>
-                onSelect({
-                  foodId:      f.foodId,
-                  namePrimary: f.namePrimary,
-                  confidence:  "high",
-                  reason:      "Dipilih manual dari database",
-                })
-              }
-              className="text-left px-3 py-2 rounded-lg hover:bg-emerald-50 hover:text-[#006c49] text-xs text-slate-700 transition-colors"
-            >
-              {f.namePrimary}
-              <span className="text-slate-400 ml-1">— {f.category}</span>
-            </button>
-          ))}
+    <div className="border-t border-slate-100 pt-3">
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="text-xs text-[#006c49] font-semibold underline underline-offset-2"
+        >
+          + Cari makanan secara manual
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold text-slate-600">Cari makanan manual:</p>
+          <input
+            type="text"
+            placeholder="Ketik nama makanan…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#006c49] focus:ring-2 focus:ring-[#006c49]/20 transition-all"
+            autoFocus
+          />
+          {results.length > 0 && (
+            <div className="flex flex-col gap-1">
+              {results.map((f) => (
+                <button
+                  key={f.foodId}
+                  onClick={() => onSelect({ foodId: f.foodId, namePrimary: f.namePrimary, confidence: "low", reason: "Dipilih manual" })}
+                  className="text-left px-3 py-2 rounded-lg border border-slate-100 hover:border-[#006c49]/40 hover:bg-emerald-50/30 text-xs text-slate-700 font-medium transition-all"
+                >
+                  {f.namePrimary}
+                  <span className="text-slate-400 font-normal ml-1">— {f.category}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {query.trim().length >= 2 && results.length === 0 && (
+            <p className="text-xs text-slate-400">Tidak ditemukan dalam database saat ini.</p>
+          )}
         </div>
       )}
-      {query.length >= 2 && results.length === 0 && (
-        <p className="text-[11px] text-slate-400 text-center py-1">
-          Tidak ditemukan dalam database lokal.
-        </p>
-      )}
-      <button
-        onClick={() => { setOpen(false); setQuery(""); setResults([]); }}
-        className="text-[11px] text-slate-400 underline underline-offset-2 self-end"
-      >
-        Tutup
-      </button>
     </div>
   );
 }

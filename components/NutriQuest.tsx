@@ -12,9 +12,6 @@ import {
 } from "@/lib/nutriquest-bank";
 import { saveQuestResult } from "@/lib/nutriquest-store";
 
-
-import { recordActivity } from "@/lib/record-activity";
-
 // ── Achievement logic ──────────────────────────────────────────────────────
 function getAchievement(correct: number, total: number) {
   const pct = (correct / total) * 100;
@@ -150,28 +147,18 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
     setPhase("result");
 
     // ── Simpan hasil ke localStorage ──────────────────────────
-    const questResultId = crypto.randomUUID();
-    const finalScore = questions.filter((q) => answers[q.id] === q.correctAnswer).length;
-    const finalPct = Math.round((finalScore / questions.length) * 100);
-
     saveQuestResult({
-      id: questResultId,
-      score: finalScore,
+      id: crypto.randomUUID(),
+      score: questions.filter((q) => answers[q.id] === q.correctAnswer).length,
       total: questions.length,
-      pct: finalPct,
-      achievement: getAchievement(finalScore, questions.length).title,
+      pct: Math.round((questions.filter((q) => answers[q.id] === q.correctAnswer).length / questions.length) * 100),
+      achievement: getAchievement(
+        questions.filter((q) => answers[q.id] === q.correctAnswer).length,
+        questions.length
+      ).title,
       domain: selectedDomain,
       timestamp: Date.now(),
       completedDate: completedDate.current,
-    });
-
-    // ── Catat ke DB + beri EXP (fire-and-forget, guest dilewati) ──
-    recordActivity({
-      activityType:  "quest",
-      activityLabel: `NutriQuest · ${selectedDomain}`,
-      sourceRef:     questResultId,
-      score:         finalPct,
-      domain:        selectedDomain,
     });
   }
 

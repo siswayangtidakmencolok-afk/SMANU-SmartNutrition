@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -40,23 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# -- SMANU dataset files -------------------------------------------------
-# Large USDA / image dataset files — do NOT commit to Git.
-# Place in nutripath/ when running import scripts locally.
-FoodData_Central_*.json
-MM-Food-100K.csv
-data/food-scanner/images/
-data/food-scanner/raw/
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-=======
-.env 
-node_modules/ 
-__pycache__/ 
-.venv/ 
-.env 
-node_modules/ 
->>>>>>> origin/fitur-food-scanner

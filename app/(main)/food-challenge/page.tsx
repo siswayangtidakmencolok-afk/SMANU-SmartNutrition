@@ -14,7 +14,6 @@ import {
   ChallengeScore,
 } from "@/lib/food-challenge-data";
 import { saveChallengeResult } from "@/lib/challenge-store";
-import { recordActivity } from "@/lib/record-activity";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Tab = "simulation" | "evaluation" | "comparator";
@@ -51,38 +50,12 @@ const FILTER_OPTIONS: { id: FoodFilter; label: string }[] = [
   { id: "snack",     label: "Camilan" },
 ];
 
-// Inline SVG icons for scenario cards — renders immediately on Android
-// without waiting for Google Fonts CDN.
-const SCENARIO_SVG: Record<string, React.ReactNode> = {
-  "school-day-budget": (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><polyline points="9 22 9 12 15 12 15 22" />
-    </svg>
-  ),
-  "exam-week-focus": (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M12 2a10 10 0 110 20A10 10 0 0112 2z" /><path d="M12 6v6l4 2" />
-    </svg>
-  ),
-  "sport-activity": (
-    // Soccer ball / sports icon — the one the user specifically mentioned as missing
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 3l2.5 5-2.5 1.5L9.5 8 12 3zm0 18l-2.5-5 2.5-1.5 2.5 1.5L12 21zM3 12l5-2.5L9.5 12 8 14.5 3 12zm18 0l-5 2.5L14.5 12 16 9.5 21 12z" />
-    </svg>
-  ),
-  "busy-dorm-morning": (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" />
-    </svg>
-  ),
+const SCENARIO_ICONS: Record<string, string> = {
+  "school-day-budget":  "storefront",
+  "exam-week-focus":    "psychology",
+  "sport-activity":     "sports_soccer",
+  "busy-dorm-morning":  "alarm",
 };
-
-const SCENARIO_SVG_FALLBACK = (
-  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-    <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-  </svg>
-);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function scoreColor(s: number) {
@@ -122,7 +95,7 @@ function ScenarioCard({
   isActive: boolean;
   onSelect: () => void;
 }) {
-  const iconSvg = SCENARIO_SVG[scenario.id] ?? SCENARIO_SVG_FALLBACK;
+  const icon = SCENARIO_ICONS[scenario.id] ?? "restaurant_menu";
   return (
     <button
       onClick={onSelect}
@@ -134,7 +107,7 @@ function ScenarioCard({
     >
       <div className="flex items-center justify-between">
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isActive ? "bg-[#6cf8bb] text-[#002113]" : "bg-slate-100 text-slate-500"}`}>
-          {iconSvg}
+          <span className="material-symbols-outlined text-[16px]">{icon}</span>
         </div>
         {isActive ? (
           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#006c49] text-white whitespace-nowrap">Aktif</span>
@@ -412,9 +385,8 @@ export default function FoodChallengePage() {
     setActiveTab("evaluation");
     if (!saved) {
       setSaved(true);
-      const challengeResultId = crypto.randomUUID();
       saveChallengeResult({
-        id: challengeResultId,
+        id: crypto.randomUUID(),
         scenarioId: activeScenario.id,
         scenarioTitle: activeScenario.title,
         score: result.score,
@@ -424,15 +396,6 @@ export default function FoodChallengePage() {
         timestamp: Date.now(),
         relatedDomains: activeScenario.relatedDomains,
         relatedKnowledgeIds: activeScenario.relatedKnowledgeIds,
-      });
-
-      // ── Catat ke DB + beri EXP ────────────────────────────────────
-      recordActivity({
-        activityType:  "challenge",
-        activityLabel: `Food Challenge · ${activeScenario.title}`,
-        sourceRef:     challengeResultId,
-        score:         result.score,
-        domain:        activeScenario.relatedDomains[0],
       });
     }
   }
@@ -753,26 +716,14 @@ export default function FoodChallengePage() {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">Estimasi Gizi Piring</span>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    {
-                      svg: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 3.5-5 11-5 11S7 10.5 7 7a5 5 0 015-5z"/><circle cx="12" cy="7" r="1.5"/></svg>,
-                      value: `${totalCalories} kkal`, label: "Energi", color: "text-[#006c49]",
-                    },
-                    {
-                      svg: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M3.5 18.5l4-8 4 6 3-4 4 6"/></svg>,
-                      value: `${totalProtein.toFixed(1)} g`, label: "Protein", color: "text-blue-600",
-                    },
-                    {
-                      svg: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>,
-                      value: `${totalCarbs.toFixed(0)} g`, label: "Karbo", color: "text-amber-600",
-                    },
-                    {
-                      svg: <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>,
-                      value: `${selectedFoodIds.length} item`, label: "Dipilih", color: "text-slate-700",
-                    },
+                    { icon: "local_fire_department", value: `${totalCalories} kkal`, label: "Energi", color: "text-[#006c49]" },
+                    { icon: "fitness_center",         value: `${totalProtein.toFixed(1)} g`,  label: "Protein",    color: "text-blue-600"    },
+                    { icon: "grain",                  value: `${totalCarbs.toFixed(0)} g`,     label: "Karbo",     color: "text-amber-600"   },
+                    { icon: "eco",                    value: `${selectedFoodIds.length} item`, label: "Dipilih",   color: "text-slate-700"   },
                   ].map(m => (
                     <div key={m.label} className="p-2.5 bg-slate-50 rounded-xl flex items-center gap-2">
-                      <div className={`w-7 h-7 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm ${m.color}`}>
-                        {m.svg}
+                      <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm">
+                        <span className={`material-symbols-outlined text-[16px] ${m.color}`}>{m.icon}</span>
                       </div>
                       <div>
                         <div className="text-xs font-bold text-slate-800">{m.value}</div>

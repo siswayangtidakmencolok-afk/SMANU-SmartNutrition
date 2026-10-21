@@ -37,23 +37,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Preconnect to Google Fonts for faster mobile load */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/*
-          Material Symbols icon font.
-          - display=block: browser shows blank space (not fallback text) while the font
-            loads. This is better than "swap" for icon fonts because swap causes text
-            fallback (the icon name string like "home" or "directions_run") to flash
-            briefly on mobile before the glyph appears — which looks like gibberish.
-          - preload hint is added below so the font bytes start downloading immediately
-            on first paint, minimising the blank-icon window.
-        */}
-        <link
-          rel="preload"
-          as="style"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
-        />
+        {/* Material Symbols icon font — display=swap prevents layout shift on slow connections */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         />
       </head>
       <body className="antialiased">

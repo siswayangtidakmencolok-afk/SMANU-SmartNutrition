@@ -16,51 +16,13 @@ const dietaryOptions = [
   { id: "shellfish-allergy", label: "Shellfish allergy" },
 ];
 
-// Inline SVG icons for situation cards — avoids Google Fonts CDN dependency
-// so icons always render on Android even when the font is slow to load.
-const SITUATION_SVG: Record<string, React.ReactNode> = {
-  "busy-studying": (
-    <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-  ),
-  "need-energy": (
-    <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-    </svg>
-  ),
-  "saving-money": (
-    <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-    </svg>
-  ),
-  "eat-campus": (
-    <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-    </svg>
-  ),
-  "cook-home": (
-    <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-  ),
-  "active": (
-    // Running / sports figure — the icon the user specifically mentioned is missing
-    <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="13" cy="5" r="1.5" />
-      <path d="M9 19.5l1.5-4.5 2.5 2 3-4.5" />
-      <path d="M5.5 13.5l3-2 1.5 3L13 13l3.5 2" />
-    </svg>
-  ),
-};
-
 const situationOptions = [
-  { id: "busy-studying", label: "Busy studying", sub: "Exam prep / Dense schedule" },
-  { id: "need-energy", label: "Need more energy", sub: "Combat afternoon slumps" },
-  { id: "saving-money", label: "Saving money", sub: "Budget-friendly macros" },
-  { id: "eat-campus", label: "Eat on campus", sub: "Cafeteria / Warung reliance" },
-  { id: "cook-home", label: "Cook at home", sub: "Boarding room / Kitchen prep" },
-  { id: "active", label: "Active lifestyle", sub: "Sports & physical activity" },
+  { id: "busy-studying", icon: "auto_stories", label: "Busy studying", sub: "Exam prep / Dense schedule" },
+  { id: "need-energy", icon: "bolt", label: "Need more energy", sub: "Combat afternoon slumps" },
+  { id: "saving-money", icon: "savings", label: "Saving money", sub: "Budget-friendly macros" },
+  { id: "eat-campus", icon: "domain", label: "Eat on campus", sub: "Cafeteria / Warung reliance" },
+  { id: "cook-home", icon: "skillet", label: "Cook at home", sub: "Boarding room / Kitchen prep" },
+  { id: "active", icon: "directions_run", label: "Active lifestyle", sub: "Sports & physical activity" },
 ];
 
 const goalOptions = [
@@ -358,13 +320,13 @@ export default function MyContextPage() {
                     }`}
                   >
                     <div className="flex items-center justify-between w-full">
-                      <span className={active ? "text-[#6cf8bb]" : "text-[#7c839b]"}>
-                        {SITUATION_SVG[s.id]}
+                      <span className={`material-symbols-outlined text-[22px] ${active ? "text-[#6cf8bb]" : "text-[#7c839b]"}`}>
+                        {s.icon}
                       </span>
                       {active && <span className="w-2 h-2 rounded-full bg-[#006c49]" />}
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-white">{s.label}</span>
+                      <span className={`text-sm font-semibold ${active ? "text-white" : "text-white"}`}>{s.label}</span>
                       <span className={`text-[11px] ${active ? "text-[#6cf8bb]" : "text-[#7c839b]"}`}>{s.sub}</span>
                     </div>
                   </button>
