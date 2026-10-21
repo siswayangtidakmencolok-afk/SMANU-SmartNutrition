@@ -1,0 +1,243 @@
+
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cara Mendapat Gemini API Key yang Benar</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 14px; line-height: 1.6; background: #fff; color: #1f2328; padding: 28px 20px 48px; }
+  .container { max-width: 720px; margin: 0 auto; }
+  .header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb; }
+  .header h1 { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+  .header p { color: #57606a; font-size: 13px; }
+
+  .diagnosis { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 14px 16px; margin-bottom: 24px; }
+  .diagnosis h2 { font-size: 13px; font-weight: 700; color: #c2410c; margin-bottom: 8px; }
+  .diagnosis p { font-size: 12px; color: #92400e; }
+  .code-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .code-bad { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; color: #b91c1c; }
+  .code-good { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; color: #15803d; }
+  .code-bad .label { font-weight: 700; display: block; margin-bottom: 4px; font-family: sans-serif; }
+  .code-good .label { font-weight: 700; display: block; margin-bottom: 4px; font-family: sans-serif; }
+
+  .step { border: 1px solid #e5e7eb; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+  .step-head { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: #f7f8fa; border-bottom: 1px solid #e5e7eb; }
+  .num { width: 26px; height: 26px; border-radius: 50%; background: #3b82d4; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-title { font-size: 13px; font-weight: 700; color: #1f2328; }
+  .step-sub { font-size: 11px; color: #57606a; margin-top: 1px; }
+  .step-body { padding: 12px 14px; font-size: 13px; }
+  .step-body p { margin-bottom: 8px; }
+  .step-body p:last-child { margin-bottom: 0; }
+
+  .url-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 12px; font-family: monospace; font-size: 12px; color: #1d4ed8; margin: 8px 0; }
+  .action-btn { display: inline-block; background: #1a73e8; color: #fff; border-radius: 6px; padding: 5px 14px; font-size: 12px; font-weight: 700; margin: 6px 2px; }
+  .warn { background: #fef9c3; border: 1px solid #fde047; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #713f12; margin: 8px 0; display: flex; gap: 8px; }
+  .ok { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #166534; margin: 8px 0; }
+  .ui-mock { background: #1e1e2e; border-radius: 8px; padding: 14px; margin: 10px 0; font-family: sans-serif; }
+  .ui-mock-title { color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+  .mock-btn { display: inline-block; background: #1a73e8; color: #fff; border-radius: 6px; padding: 6px 16px; font-size: 12px; font-weight: 600; cursor: pointer; margin-right: 8px; }
+  .mock-btn.secondary { background: transparent; border: 1px solid #4d4d60; color: #94a3b8; }
+  .key-row { background: #2d2d3f; border-radius: 6px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .key-name { color: #e2e8f0; font-size: 11px; font-weight: 600; }
+  .key-val { font-family: monospace; font-size: 11px; }
+  .key-val.good { color: #4ade80; }
+  .key-val.bad { color: #f87171; }
+
+  .env-block { background: #0f172a; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12px; color: #e2e8f0; margin: 10px 0; line-height: 1.8; }
+  .env-block .cmt { color: #475569; }
+  .env-block .key { color: #c084fc; }
+  .env-block .val-bad { color: #f87171; }
+  .env-block .val-good { color: #4ade80; }
+
+  .summary { background: #f0fdf4; border: 2px solid #86efac; border-radius: 10px; padding: 14px 16px; margin-top: 20px; }
+  .summary h2 { font-size: 13px; font-weight: 700; color: #166534; margin-bottom: 10px; }
+  .summary ol { padding-left: 18px; font-size: 13px; color: #166534; }
+  .summary ol li { margin-bottom: 5px; }
+
+  .footer { text-align: center; color: #9ca3af; font-size: 11px; margin-top: 36px; padding-top: 14px; border-top: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <h1>Cara Mendapat Gemini API Key yang Benar</h1>
+    <p>Untuk SMANU AI Assistant di project "ibm company project"</p>
+  </div>
+
+  
+  <div class="diagnosis">
+    <h2>⚠ Masalah yang Ditemukan dari Diagnostic</h2>
+    <p>API key yang sekarang ada di <code>.env.local</code> adalah <strong>OAuth2 access token</strong>, bukan Gemini API key. Keduanya dari Google, tapi berbeda fungsinya.</p>
+    <div class="code-compare">
+      <div class="code-bad">
+        <span class="label">❌ Yang ada sekarang (salah)</span>
+        Format: AQ.Ab8R...<br />
+        Panjang: 53 karakter<br />
+        Jenis: OAuth2 token<br />
+        <br />
+        Tidak bisa digunakan untuk Gemini API
+      </div>
+      <div class="code-good">
+        <span class="label">✅ Yang dibutuhkan (benar)</span>
+        Format: AIzaSy...<br />
+        Panjang: 39 karakter<br />
+        Jenis: API key<br />
+        <br />
+        Ini yang berfungsi untuk Gemini API
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="step">
+    <div class="step-head">
+      <div class="num">1</div>
+      <div>
+        <div class="step-title">Buka halaman API Keys Google AI Studio</div>
+        <div class="step-sub">Langsung ke halaman yang benar — bukan halaman lain</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Buka browser dan masuk ke URL ini persis:</p>
+      <div class="url-box">https://aistudio.google.com/app/apikey</div>
+      <p>Login dengan akun Google yang sama dengan project "ibm company project".</p>
+    </div>
+  </div>
+
+  
+  <div class="step">
+    <div class="step-head">
+      <div class="num">2</div>
+      <div>
+        <div class="step-title">Pastikan kamu di halaman "API keys" yang benar</div>
+        <div class="step-sub">Halaman ini menampilkan daftar API key, bukan OAuth credentials</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Halaman yang benar judulnya adalah <strong>"API keys"</strong> dan menampilkan tombol seperti ini:</p>
+      <div class="ui-mock">
+        <div class="ui-mock-title">Google AI Studio — API keys</div>
+        <div class="mock-btn">+ Create API key</div>
+        <div class="mock-btn secondary">Get API key in new project</div>
+      </div>
+      <div class="warn">
+        ⚠ Kalau kamu melihat halaman "OAuth 2.0 Client IDs" atau "Service Accounts", itu halaman yang salah. Itu ada di Google Cloud Console, bukan Google AI Studio.
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="step">
+    <div class="step-head">
+      <div class="num">3</div>
+      <div>
+        <div class="step-title">Cari API key yang sudah ada atau buat baru</div>
+        <div class="step-sub">Gunakan project "ibm company project" yang sudah ada</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p><strong>Jika sudah ada key di daftar:</strong> Lihat apakah nilainya dimulai dengan <code>AIzaSy</code>. Kalau ya, kamu bisa copy dari sana.</p>
+      <p><strong>Jika perlu buat baru:</strong> Klik <span class="action-btn">+ Create API key</span> → pilih project <strong>"ibm company project"</strong> → klik <strong>Create API key in existing project</strong>.</p>
+      <div class="ui-mock">
+        <div class="ui-mock-title">Contoh tampilan key yang benar</div>
+        <div class="key-row">
+          <span class="key-name">SMANU Project Key</span>
+          <span class="key-val good">AIzaSy••••••••••••••••••••••••••••••</span>
+        </div>
+        <div class="key-row" style="margin-top:6px;opacity:0.5">
+          <span class="key-name">Key yang salah (jangan gunakan ini)</span>
+          <span class="key-val bad">AQ.Ab8R••••••••••••••••••••••••••••••</span>
+        </div>
+      </div>
+      <div class="ok">✅ Key yang valid SELALU dimulai dengan <strong>AIzaSy</strong> dan panjangnya sekitar 39 karakter.</div>
+    </div>
+  </div>
+
+  
+  <div class="step">
+    <div class="step-head">
+      <div class="num">4</div>
+      <div>
+        <div class="step-title">Copy key dan update .env.local</div>
+        <div class="step-sub">Ganti baris GEMINI_API_KEY di file .env.local</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Buka file <code>nutripath/.env.local</code> dan ganti baris ini:</p>
+      <div class="env-block">
+        <span class="cmt"># Baris lama yang salah:</span><br />
+        <span class="key">GEMINI_API_KEY</span>=<span class="val-bad">AQ.Ab8RN6Jdz3QtP...</span><br />
+        <br />
+        <span class="cmt"># Ganti menjadi (isi dengan key kamu):</span><br />
+        <span class="key">GEMINI_API_KEY</span>=<span class="val-good">AIzaSy_PASTE_KEY_KAMU_DISINI</span>
+      </div>
+      <div class="warn">
+        ⚠ JANGAN tambahkan spasi, tanda kutip, atau karakter lain di sekitar key. Langsung paste nilainya saja.
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="step">
+    <div class="step-head">
+      <div class="num">5</div>
+      <div>
+        <div class="step-title">Restart dev server dan test</div>
+        <div class="step-sub">Wajib restart agar .env.local terbaca ulang</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Di terminal proyek kamu:</p>
+      <div class="env-block">
+        <span class="cmt"># Stop server dulu (Ctrl+C), lalu:</span><br />
+        cd nutripath<br />
+        npm run dev
+      </div>
+      <p>Setelah server berjalan, test langsung dari terminal (terminal baru):</p>
+      <div class="env-block">
+        <span class="cmt"># Test SMANU AI Assistant (Gemini):</span><br />
+        curl -X POST http://localhost:3000/api/ai-chat \<br />
+          -H "Content-Type: application/json" \<br />
+          -d "{\"message\": \"halo, apa makanan bergizi?\"}"<br />
+        <br />
+        <span class="cmt"># Expected: { "reply": "..." }</span><br />
+        <span class="cmt"># Error jika key salah: { "error": "AI Assistant belum tersedia..." }</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="step">
+    <div class="step-head">
+      <div class="num">6</div>
+      <div>
+        <div class="step-title">Update GEMINI_API_KEY di Vercel</div>
+        <div class="step-sub">Setelah local berhasil, update production</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <p>Buka <strong>vercel.com → Project SMANU → Settings → Environment Variables</strong></p>
+      <p>Cari <code>GEMINI_API_KEY</code> → klik Edit → paste key baru yang dimulai <code>AIzaSy...</code> → Save → <strong>Redeploy</strong>.</p>
+      <div class="ok">✅ Tidak perlu mengubah LANGFLOW_* variables di Vercel.</div>
+    </div>
+  </div>
+
+  
+  <div class="summary">
+    <h2>✅ Ringkasan yang perlu dilakukan</h2>
+    <ol>
+      <li>Buka <strong>aistudio.google.com/app/apikey</strong></li>
+      <li>Buat atau salin API key yang dimulai <strong>AIzaSy...</strong></li>
+      <li>Ganti <code>GEMINI_API_KEY</code> di <code>.env.local</code></li>
+      <li>Restart <code>npm run dev</code></li>
+      <li>Test dengan curl atau langsung buka SMANU AI Assistant di browser</li>
+      <li>Kalau local berhasil → update key di Vercel → Redeploy</li>
+    </ol>
+  </div>
+
+  <div class="footer">Made with IBM Bob · SMANU SmartNutrition</div>
+</div>
+</body>
+</html>
