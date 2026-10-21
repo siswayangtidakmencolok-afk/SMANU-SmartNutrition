@@ -13,6 +13,17 @@
  *   portionLabel:        string,
  *   modelUsed?:          string,
  *   confidenceNote?:     string,
+ *   // AI estimate fields (present when dataStatus === "ai_estimate")
+ *   dataStatus?:         "database_verified" | "ai_estimate" | "unavailable",
+ *   dataSourceUsed?:     string,
+ *   energyRange?:        string | null,
+ *   estimatedEnergyKcal?: number | null,
+ *   estimatedProteinG?:   number | null,
+ *   estimatedFatG?:       number | null,
+ *   estimatedCarbG?:      number | null,
+ *   estimatedFiberG?:     number | null,
+ *   assumptions?:         string,
+ *   explanationJson?:     unknown,
  * }
  *
  * RESPONSE 200: { id: string }
@@ -24,18 +35,28 @@ import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { foodScanLogs } from "@/lib/db/schema";
-import { estimateNutrition } from "@/lib/food-database";
 
 export const runtime = "nodejs";
 
 interface SaveBody {
-  recognizedFoodId?:   string | null;
-  recognizedFoodName:  string;
-  candidatesJson?:     unknown;
-  portionG:            number;
-  portionLabel:        string;
-  modelUsed?:          string;
-  confidenceNote?:     string;
+  recognizedFoodId?:    string | null;
+  recognizedFoodName:   string;
+  candidatesJson?:      unknown;
+  portionG:             number;
+  portionLabel:         string;
+  modelUsed?:           string;
+  confidenceNote?:      string;
+  // AI-estimate fields
+  dataStatus?:          string | null;
+  dataSourceUsed?:      string | null;
+  energyRange?:         string | null;
+  estimatedEnergyKcal?: number | null;
+  estimatedProteinG?:   number | null;
+  estimatedFatG?:       number | null;
+  estimatedCarbG?:      number | null;
+  estimatedFiberG?:     number | null;
+  assumptions?:         string | null;
+  explanationJson?:     unknown;
 }
 
 export async function POST(req: NextRequest) {
@@ -54,8 +75,13 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Format request tidak valid." }, { status: 400 });
   }
 
-  const { recognizedFoodId, recognizedFoodName, candidatesJson, portionG, portionLabel,
-          modelUsed, confidenceNote } = body;
+  const {
+    recognizedFoodId, recognizedFoodName, candidatesJson, portionG, portionLabel,
+    modelUsed, confidenceNote,
+    dataStatus, dataSourceUsed, energyRange,
+    estimatedEnergyKcal, estimatedProteinG, estimatedFatG, estimatedCarbG, estimatedFiberG,
+    assumptions, explanationJson,
+  } = body;
 
   if (!recognizedFoodName?.trim()) {
     return Response.json({ error: "recognizedFoodName diperlukan." }, { status: 400 });
@@ -64,20 +90,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "portionG harus angka positif (max 5000 g)." }, { status: 400 });
   }
 
-  // 3. Compute nutrition estimate if food is in DB
-  let nutrition: ReturnType<typeof estimateNutrition> = null;
-  let dataSourceUsed: string | undefined;
-  let assumptions: string | undefined;
-
-  if (recognizedFoodId) {
-    nutrition = estimateNutrition(recognizedFoodId, portionG);
-    if (nutrition) {
-      dataSourceUsed = nutrition.dataSource;
-      assumptions    = nutrition.assumptions;
-    }
-  }
-
-  // 4. Write to DB
+  // 3. Write to DB
   try {
     const [saved] = await db.insert(foodScanLogs).values({
       userId,
@@ -86,14 +99,19 @@ export async function POST(req: NextRequest) {
       candidatesJson:      candidatesJson ?? null,
       portionG,
       portionLabel:        portionLabel?.trim().slice(0, 100) ?? null,
-      estimatedEnergyKcal: nutrition?.energyKcal ?? null,
-      estimatedProteinG:   nutrition?.proteinG   ?? null,
-      estimatedFatG:       nutrition?.fatG       ?? null,
-      estimatedCarbG:      nutrition?.carbG      ?? null,
       modelUsed:           modelUsed?.slice(0, 100)      ?? "gemini-flash-lite-latest",
       confidenceNote:      confidenceNote?.slice(0, 50)  ?? null,
-      dataSourceUsed:      dataSourceUsed                 ?? null,
-      assumptions:         assumptions?.slice(0, 1000)   ?? null,
+      // AI estimate / DB fields — all optional
+      dataStatus:          dataStatus?.slice(0, 50)      ?? "database_verified",
+      dataSourceUsed:      dataSourceUsed?.slice(0, 100) ?? null,
+      energyRange:         energyRange?.slice(0, 80)     ?? null,
+      estimatedEnergyKcal: typeof estimatedEnergyKcal === "number" ? estimatedEnergyKcal : null,
+      estimatedProteinG:   typeof estimatedProteinG   === "number" ? estimatedProteinG   : null,
+      estimatedFatG:       typeof estimatedFatG       === "number" ? estimatedFatG       : null,
+      estimatedCarbG:      typeof estimatedCarbG      === "number" ? estimatedCarbG      : null,
+      estimatedFiberG:     typeof estimatedFiberG     === "number" ? estimatedFiberG     : null,
+      assumptions:         assumptions?.slice(0, 1000) ?? null,
+      explanationJson:     explanationJson             ?? null,
     }).returning({ id: foodScanLogs.id });
 
     return Response.json({ id: saved.id });
