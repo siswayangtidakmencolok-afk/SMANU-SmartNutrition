@@ -44,13 +44,18 @@ interface SaveBody {
   portionLabel:         string;
   modelUsed?:           string;
   confidenceNote?:      string;
-  // Pre-computed values passed from the client (preferred when available)
+  // Pre-computed nutrition — no server re-query when client supplies these
   estimatedEnergyKcal?: number | null;
   estimatedProteinG?:   number | null;
   estimatedFatG?:       number | null;
   estimatedCarbG?:      number | null;
+  estimatedFiberG?:     number | null;
   dataSourceUsed?:      string;
+  dataStatus?:          string;
+  energyRange?:         string;
   assumptions?:         string;
+  // AI explanation blob (7-section structured report)
+  explanationJson?:     unknown;
 }
 
 export async function POST(req: NextRequest) {
@@ -148,10 +153,14 @@ export async function POST(req: NextRequest) {
       estimatedProteinG:   proteinG   ?? null,
       estimatedFatG:       fatG       ?? null,
       estimatedCarbG:      carbG      ?? null,
+      estimatedFiberG:     body.estimatedFiberG ?? null,
       modelUsed:           modelUsed?.slice(0, 100)      ?? "gemini-flash-lite-latest",
       confidenceNote:      confidenceNote?.slice(0, 50)  ?? null,
       dataSourceUsed:      dataSourceUsed                 ?? null,
+      dataStatus:          body.dataStatus?.slice(0, 30) ?? "database_verified",
+      energyRange:         body.energyRange?.slice(0, 80) ?? null,
       assumptions:         assumptions?.slice(0, 1000)   ?? null,
+      explanationJson:     body.explanationJson ?? null,
     }).returning({ id: foodScanLogs.id });
 
     return Response.json({ id: saved.id });

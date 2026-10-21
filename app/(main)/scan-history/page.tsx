@@ -40,7 +40,15 @@ function NullSafe({ v, unit }: { v: number | null; unit: string }) {
   return <span>{v} {unit}</span>;
 }
 
-function DataSourceBadge({ source }: { source: string | null }) {
+function DataSourceBadge({ source, dataStatus }: { source: string | null; dataStatus?: string | null }) {
+  // AI estimate badge takes priority
+  if (dataStatus === "ai_estimate") {
+    return (
+      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium border bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-0.5">
+        <span className="text-[10px]">✦</span> Estimasi AI
+      </span>
+    );
+  }
   if (!source || source === "—") return null;
   const color = source === "TKPI-2017"
     ? "bg-emerald-50 text-emerald-700 border-emerald-200"
@@ -57,6 +65,16 @@ function DataSourceBadge({ source }: { source: string | null }) {
 
 // ── Scan Card ────────────────────────────────────────────────────────────────
 
+type AiSections = {
+  whatIsIt: string;
+  composition: string;
+  nutritionExplain: string;
+  portionContext: string;
+  variations: string;
+  sourceLimits: string;
+  eduSummary: string;
+};
+
 function ScanCard({
   scan,
   onDelete,
@@ -64,8 +82,22 @@ function ScanCard({
   scan: ScanLogEntry;
   onDelete: (id: string) => void;
 }) {
-  const [confirming, setConfirming] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [confirming, setConfirming]           = useState(false);
+  const [deleting, setDeleting]               = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const isAiEstimate = scan.dataStatus === "ai_estimate";
+  const sections = scan.explanationJson as AiSections | null;
+
+  const SECTION_META: { key: keyof AiSections; label: string }[] = [
+    { key: "whatIsIt",         label: "Pengertian Makanan" },
+    { key: "composition",      label: "Komposisi & Bahan" },
+    { key: "nutritionExplain", label: "Penjelasan Nutrisi" },
+    { key: "portionContext",   label: "Konteks Porsi" },
+    { key: "variations",       label: "Variasi & Faktor" },
+    { key: "sourceLimits",     label: "Sumber & Keterbatasan" },
+    { key: "eduSummary",       label: "Kesimpulan Edukatif" },
+  ];
 
   async function handleDelete() {
     setDeleting(true);
@@ -73,9 +105,7 @@ function ScanCard({
       const res = await fetch(`/api/food-scanner/history?id=${encodeURIComponent(scan.id)}`, {
         method: "DELETE",
       });
-      if (res.ok) {
-        onDelete(scan.id);
-      }
+      if (res.ok) onDelete(scan.id);
     } finally {
       setDeleting(false);
       setConfirming(false);
@@ -86,19 +116,21 @@ function ScanCard({
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
       {/* Header row */}
       <div className="flex items-start gap-3 p-4">
-        {/* Icon */}
-        <div className="w-10 h-10 rounded-xl bg-[#006c49]/10 flex items-center justify-center shrink-0 mt-0.5">
-          <span className="material-symbols-outlined text-[#006c49] text-[20px]">restaurant</span>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+          isAiEstimate ? "bg-blue-50" : "bg-[#006c49]/10"
+        }`}>
+          <span className={`material-symbols-outlined text-[20px] ${isAiEstimate ? "text-blue-500" : "text-[#006c49]"}`}>
+            {isAiEstimate ? "smart_toy" : "restaurant"}
+          </span>
         </div>
 
-        {/* Main content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className="text-sm font-bold text-slate-800 leading-snug">
                 {scan.recognizedFoodName}
               </p>
-              <DataSourceBadge source={scan.dataSourceUsed} />
+              <DataSourceBadge source={scan.dataSourceUsed} dataStatus={scan.dataStatus} />
               {scan.confidenceNote && (
                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium border ${
                   scan.confidenceNote === "high"
@@ -115,8 +147,6 @@ function ScanCard({
             </div>
             <p className="text-[11px] text-slate-400 shrink-0">{formatRelTime(scan.scannedAt)}</p>
           </div>
-
-          {/* Portion */}
           {scan.portionLabel && (
             <p className="text-xs text-slate-500 mt-0.5">{scan.portionLabel}</p>
           )}
@@ -126,19 +156,61 @@ function ScanCard({
       {/* Nutrient grid */}
       <div className="px-4 pb-3 grid grid-cols-4 gap-2">
         {[
-          { label: "Energi",  value: scan.estimatedEnergyKcal, unit: "kkal" },
+          { label: "Energi",  value: scan.energyRange ?? scan.estimatedEnergyKcal, unit: scan.energyRange ? "" : "kkal", isRange: !!scan.energyRange },
           { label: "Protein", value: scan.estimatedProteinG,   unit: "g" },
           { label: "Lemak",   value: scan.estimatedFatG,       unit: "g" },
           { label: "Karbo",   value: scan.estimatedCarbG,      unit: "g" },
-        ].map(({ label, value, unit }) => (
-          <div key={label} className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100">
+        ].map(({ label, value, unit, isRange }) => (
+          <div key={label} className={`rounded-lg p-2 text-center border ${
+            isAiEstimate
+              ? "bg-blue-50/50 border-blue-100"
+              : "bg-slate-50 border-slate-100"
+          }`}>
             <p className="text-[9px] text-slate-400 font-medium">{label}</p>
             <p className="text-xs font-bold text-slate-700 mt-0.5">
-              <NullSafe v={value ?? null} unit={unit} />
+              {isRange
+                ? <span className="text-[10px]">{String(value)}</span>
+                : <NullSafe v={typeof value === "number" ? value : null} unit={unit} />
+              }
             </p>
           </div>
         ))}
       </div>
+
+      {/* AI explanation accordion — only for ai_estimate with saved sections */}
+      {isAiEstimate && sections && (
+        <div className="px-4 pb-3">
+          <div className="flex flex-col gap-1 border border-blue-100 rounded-xl overflow-hidden">
+            <div className="px-3 py-2 bg-blue-50 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-blue-500 text-[13px]">smart_toy</span>
+              <p className="text-[10px] font-semibold text-blue-700">Laporan AI tersimpan — klik untuk baca</p>
+            </div>
+            {SECTION_META.map(({ key, label }) => {
+              const text = sections[key];
+              if (!text) return null;
+              const isOpen = expandedSection === key;
+              return (
+                <div key={key} className="border-t border-blue-50">
+                  <button
+                    onClick={() => setExpandedSection(isOpen ? null : key)}
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-white hover:bg-slate-50 text-left transition-colors"
+                  >
+                    <span className="text-[11px] font-medium text-slate-700">{label}</span>
+                    <span className={`material-symbols-outlined text-[14px] text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}>
+                      expand_more
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="px-3 pb-2.5 pt-1 bg-slate-50">
+                      <p className="text-[11px] text-slate-600 leading-relaxed">{text}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Footer: assumptions + delete */}
       <div className="px-4 pb-4 flex items-end justify-between gap-3">
@@ -366,7 +438,7 @@ export default function ScanHistoryPage() {
       {/* Footer note */}
       {scans.length > 0 && (
         <p className="text-center text-xs text-slate-400 pb-2">
-          {total} scan tersimpan · Semua nilai adalah estimasi edukatif berdasarkan data referensi TKPI-2017 / USDA-FDC
+          {total} scan tersimpan · Nilai dari database TKPI-2017/USDA-FDC atau estimasi AI (ditandai ✦) · Hanya referensi edukatif
         </p>
       )}
     </div>

@@ -350,18 +350,19 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
       const data = await res.json() as NutritionApiResponse;
 
       const newResult: NutritionResult = {
-        energyKcal:   data.energyKcal,
-        proteinG:     data.proteinG,
-        fatG:         data.fatG,
-        carbG:        data.carbG,
-        fiberG:       data.fiberG,
-        portionG:     data.portionG,
-        portionLabel: actualPortionLabel,
-        isEstimate:   data.isEstimate,
-        dataStatus:   "database_verified",
-        dataSource:   data.dataSource,
-        assumptions:  data.assumptions,
-        foodName:     selectedCandidate.namePrimary,
+        energyKcal:         data.energyKcal,
+        proteinG:           data.proteinG,
+        fatG:               data.fatG,
+        carbG:              data.carbG,
+        fiberG:             data.fiberG,
+        portionG:           data.portionG,
+        portionLabel:       actualPortionLabel,
+        isEstimate:         data.isEstimate,
+        weightIsAiEstimate: false,
+        dataStatus:         "database_verified",
+        dataSource:         data.dataSource,
+        assumptions:        data.assumptions,
+        foodName:           selectedCandidate.namePrimary,
       };
       setResult(newResult);
 
@@ -434,13 +435,18 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
           portionLabel:        result.portionLabel,
           confidenceNote:      selectedCandidate.confidence,
           modelUsed:           "gemini-flash-lite-latest",
-          // Pass pre-computed nutrition so save route doesn't need to re-query
+          // Pre-computed nutrition — no server re-query needed
           estimatedEnergyKcal: result.energyKcal,
           estimatedProteinG:   result.proteinG,
           estimatedFatG:       result.fatG,
           estimatedCarbG:      result.carbG,
+          estimatedFiberG:     result.fiberG,
           dataSourceUsed:      result.dataStatus !== "unavailable" ? result.dataSource : undefined,
+          dataStatus:          result.dataStatus,
+          energyRange:         result.energyRange ?? undefined,
           assumptions:         result.assumptions,
+          // AI explanation blob — persisted for history re-render
+          explanationJson:     result.sections ?? undefined,
         }),
       });
       const json = await res.json() as { id?: string; error?: string };
@@ -835,91 +841,8 @@ export default function FoodScannerModal({ onClose }: FoodScannerModalProps) {
                 </div>
 
               ) : result.dataStatus === "ai_estimate" ? (
-                /* ── AI Estimate result ─────────────────────────────────── */
-                <div className="flex flex-col gap-3">
-                  {/* Status badge */}
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
-                    <span className="material-symbols-outlined text-blue-500 text-[16px]">smart_toy</span>
-                    <p className="text-[11px] text-blue-700 font-semibold">Estimasi AI — perlu verifikasi</p>
-                  </div>
-
-                  {/* Explanation */}
-                  {result.explanation && (
-                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                      <p className="text-[11px] font-semibold text-slate-600 mb-1">Pengertian makanan</p>
-                      <p className="text-[11px] text-slate-600 leading-relaxed">{result.explanation}</p>
-                    </div>
-                  )}
-
-                  {/* Macro grid */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <NutrientTile
-                      label="Energi"
-                      value={
-                        result.energyKcal != null ? `~${result.energyKcal} kkal`
-                        : result.energyRange ? result.energyRange
-                        : "—"
-                      }
-                      accent="emerald"
-                      unavailable={result.energyKcal == null && !result.energyRange}
-                      isAiEstimate
-                    />
-                    <NutrientTile
-                      label="Protein"
-                      value={result.proteinG != null ? `~${result.proteinG} g` : "—"}
-                      accent="blue"
-                      unavailable={result.proteinG == null}
-                      isAiEstimate
-                    />
-                    <NutrientTile
-                      label="Lemak"
-                      value={result.fatG != null ? `~${result.fatG} g` : "—"}
-                      accent="orange"
-                      unavailable={result.fatG == null}
-                      isAiEstimate
-                    />
-                    <NutrientTile
-                      label="Karbohidrat"
-                      value={result.carbG != null ? `~${result.carbG} g` : "—"}
-                      accent="violet"
-                      unavailable={result.carbG == null}
-                      isAiEstimate
-                    />
-                    {result.fiberG != null && (
-                      <NutrientTile label="Serat" value={`~${result.fiberG} g`} accent="slate" isAiEstimate />
-                    )}
-                  </div>
-
-                  {/* AI disclaimer */}
-                  {result.aiDisclaimer && (
-                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-col gap-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-amber-500 text-[14px]">warning</span>
-                        <p className="text-[11px] font-semibold text-amber-800">Sumber &amp; Keterbatasan</p>
-                      </div>
-                      <p className="text-[11px] text-amber-700 leading-relaxed">{result.aiDisclaimer}</p>
-                    </div>
-                  )}
-
-                  {/* Report button — let user also report it for the team */}
-                  {!candidateReported ? (
-                    <button
-                      onClick={handleReportUnknown}
-                      disabled={reportingCandidate}
-                      className="py-2 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
-                    >
-                      {reportingCandidate
-                        ? <span className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                        : <span className="material-symbols-outlined text-[15px]">add_circle</span>}
-                      {reportingCandidate ? "Melaporkan…" : "Laporkan agar ditambahkan ke database"}
-                    </button>
-                  ) : (
-                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-emerald-600 text-[15px]">check_circle</span>
-                      <p className="text-xs text-emerald-700">Laporan diterima. Terima kasih!</p>
-                    </div>
-                  )}
-                </div>
+                /* ── AI Estimate result — full 7-section report ─────────── */
+                <AiEstimatePanel result={result} candidateReported={candidateReported} reportingCandidate={reportingCandidate} onReportUnknown={handleReportUnknown} />
 
               ) : (
                 /* ── Database-verified result — macros + DRI bars ───────── */
@@ -1100,6 +1023,148 @@ function NutrientTile({
       <p className={`text-base font-bold leading-tight ${unavailable ? "text-slate-300" : ""}`}>
         {value}
       </p>
+    </div>
+  );
+}
+
+// ── AiEstimatePanel — full 7-section AI result display ───────────────────────
+
+function AiEstimatePanel({
+  result,
+  candidateReported,
+  reportingCandidate,
+  onReportUnknown,
+}: {
+  result: NutritionResult;
+  candidateReported: boolean;
+  reportingCandidate: boolean;
+  onReportUnknown: () => void;
+}) {
+  const [expandedSection, setExpandedSection] = useState<string | null>("whatIsIt");
+
+  const SECTION_META: { key: keyof AiSections; label: string; icon: string }[] = [
+    { key: "whatIsIt",         label: "Pengertian Makanan",         icon: "menu_book" },
+    { key: "composition",      label: "Komposisi & Bahan",          icon: "category" },
+    { key: "nutritionExplain", label: "Penjelasan Nutrisi",         icon: "science" },
+    { key: "portionContext",   label: "Konteks Porsi & Berat",      icon: "monitor_weight" },
+    { key: "variations",       label: "Variasi & Ketidakpastian",   icon: "shuffle" },
+    { key: "sourceLimits",     label: "Sumber & Keterbatasan",      icon: "info" },
+    { key: "eduSummary",       label: "Kesimpulan Edukatif",        icon: "lightbulb" },
+  ];
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Status badge */}
+      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
+        <span className="material-symbols-outlined text-blue-500 text-[16px]">smart_toy</span>
+        <p className="text-[11px] text-blue-700 font-semibold">Estimasi AI — perlu verifikasi</p>
+        {result.weightIsAiEstimate && (
+          <span className="ml-auto text-[10px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-semibold">
+            Berat estimasi AI
+          </span>
+        )}
+      </div>
+
+      {/* Macro grid */}
+      <div className="grid grid-cols-2 gap-2">
+        <NutrientTile
+          label="Energi"
+          value={
+            result.energyKcal != null ? `~${result.energyKcal} kkal`
+            : result.energyRange ? result.energyRange
+            : "—"
+          }
+          accent="emerald"
+          unavailable={result.energyKcal == null && !result.energyRange}
+          isAiEstimate
+        />
+        <NutrientTile
+          label="Protein"
+          value={result.proteinG != null ? `~${result.proteinG} g` : "—"}
+          accent="blue"
+          unavailable={result.proteinG == null}
+          isAiEstimate
+        />
+        <NutrientTile
+          label="Lemak"
+          value={result.fatG != null ? `~${result.fatG} g` : "—"}
+          accent="orange"
+          unavailable={result.fatG == null}
+          isAiEstimate
+        />
+        <NutrientTile
+          label="Karbohidrat"
+          value={result.carbG != null ? `~${result.carbG} g` : "—"}
+          accent="violet"
+          unavailable={result.carbG == null}
+          isAiEstimate
+        />
+        {result.fiberG != null && (
+          <NutrientTile label="Serat" value={`~${result.fiberG} g`} accent="slate" isAiEstimate />
+        )}
+      </div>
+
+      {/* 7-section accordion — only rendered when sections are available */}
+      {result.sections && (
+        <div className="flex flex-col gap-1.5">
+          <p className="text-[11px] font-semibold text-slate-600">Laporan mendalam AI:</p>
+          {SECTION_META.map(({ key, label, icon }) => {
+            const text = result.sections![key];
+            const isOpen = expandedSection === key;
+            return (
+              <div key={key} className="rounded-xl border border-slate-200 overflow-hidden">
+                <button
+                  onClick={() => setExpandedSection(isOpen ? null : key)}
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-white hover:bg-slate-50 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="material-symbols-outlined text-[15px] text-[#006c49] shrink-0">{icon}</span>
+                    <span className="text-[11px] font-semibold text-slate-700 truncate">{label}</span>
+                  </div>
+                  <span className={`material-symbols-outlined text-[16px] text-slate-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`}>
+                    expand_more
+                  </span>
+                </button>
+                {isOpen && (
+                  <div className="px-4 pb-3 pt-1 bg-slate-50 border-t border-slate-100">
+                    <p className="text-[11px] text-slate-600 leading-relaxed">{text}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Source limitation box */}
+      {result.aiDisclaimer && (
+        <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-amber-500 text-[14px]">warning</span>
+            <p className="text-[11px] font-semibold text-amber-800">Sumber &amp; Keterbatasan</p>
+          </div>
+          <p className="text-[11px] text-amber-700 leading-relaxed">{result.aiDisclaimer}</p>
+        </div>
+      )}
+
+      {/* Report button */}
+      {!candidateReported ? (
+        <button
+          onClick={onReportUnknown}
+          disabled={reportingCandidate}
+          className="py-2 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-60"
+        >
+          {reportingCandidate
+            ? <span className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+            : <span className="material-symbols-outlined text-[15px]">add_circle</span>}
+          {reportingCandidate ? "Melaporkan…" : "Laporkan agar ditambahkan ke database"}
+        </button>
+      ) : (
+        <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
+          <span className="material-symbols-outlined text-emerald-600 text-[15px]">check_circle</span>
+          <p className="text-xs text-emerald-700">Laporan diterima. Terima kasih!</p>
+        </div>
+      )}
     </div>
   );
 }
