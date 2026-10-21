@@ -42,11 +42,15 @@ export interface ScanLogEntry {
   estimatedProteinG:   number | null;
   estimatedFatG:       number | null;
   estimatedCarbG:      number | null;
+  estimatedFiberG:     number | null;
   dataSourceUsed:      string | null;
+  dataStatus:          string | null;
+  energyRange:         string | null;
   confidenceNote:      string | null;
   modelUsed:           string | null;
   assumptions:         string | null;
-  scannedAt:           string;  // ISO string
+  explanationJson:     unknown;   // AiSections object | null
+  scannedAt:           string;    // ISO string
 }
 
 // ── GET ───────────────────────────────────────────────────────────────────────
@@ -77,10 +81,14 @@ export async function GET(req: NextRequest) {
           estimatedProteinG:   foodScanLogs.estimatedProteinG,
           estimatedFatG:       foodScanLogs.estimatedFatG,
           estimatedCarbG:      foodScanLogs.estimatedCarbG,
+          estimatedFiberG:     foodScanLogs.estimatedFiberG,
           dataSourceUsed:      foodScanLogs.dataSourceUsed,
+          dataStatus:          foodScanLogs.dataStatus,
+          energyRange:         foodScanLogs.energyRange,
           confidenceNote:      foodScanLogs.confidenceNote,
           modelUsed:           foodScanLogs.modelUsed,
           assumptions:         foodScanLogs.assumptions,
+          explanationJson:     foodScanLogs.explanationJson,
           scannedAt:           foodScanLogs.scannedAt,
         })
         .from(foodScanLogs)
