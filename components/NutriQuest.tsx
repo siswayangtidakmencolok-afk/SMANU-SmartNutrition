@@ -106,6 +106,8 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
   const [currentIdx, setCurrentIdx] = useState(0);
   const [showValidation, setShowValidation] = useState(false);
   const [reviewIdx, setReviewIdx] = useState(0);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [activityMessage, setActivityMessage] = useState<string | null>(null);
 
   const domains = getDomains(QUESTION_BANK);
   const current = questions[currentIdx];
@@ -120,7 +122,13 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
 
   function startQuest() {
     const picked = pickQuestions(QUESTION_BANK, selectedDomain, QUEST_QUESTION_COUNT);
-    setQuestions(picked); setAnswers({}); setCurrentIdx(0); setShowValidation(false); setPhase("quiz");
+    setQuestions(picked);
+    setAnswers({});
+    setCurrentIdx(0);
+    setShowValidation(false);
+    setAttemptId(crypto.randomUUID());
+    setActivityMessage(null);
+    setPhase("quiz");
   }
 
   function selectAnswer(option: string) {
@@ -146,9 +154,10 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
     completedDate.current = new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
     setPhase("result");
 
-    // ── Simpan hasil ke localStorage ──────────────────────────
+    const resultId = attemptId ?? crypto.randomUUID();
+    setAttemptId(resultId);
     saveQuestResult({
-      id: crypto.randomUUID(),
+      id: resultId,
       score: questions.filter((q) => answers[q.id] === q.correctAnswer).length,
       total: questions.length,
       pct: Math.round((questions.filter((q) => answers[q.id] === q.correctAnswer).length / questions.length) * 100),
@@ -160,13 +169,54 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
       timestamp: Date.now(),
       completedDate: completedDate.current,
     });
+
+    setActivityMessage("Memverifikasi hasil NutriQuest untuk pencatatan EXP…");
+    void (async () => {
+      try {
+        const response = await fetch("/api/user/activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            activityType: "quest",
+            sourceRef: resultId,
+            domain: selectedDomain,
+            questionIds: questions.map((question) => question.id),
+            answers,
+          }),
+        });
+        const result = await response.json() as {
+          error?: string;
+          expAwarded?: number;
+          achievementExpAwarded?: number;
+          alreadyRecorded?: boolean;
+        };
+        if (response.status === 401) {
+          setActivityMessage("Masuk untuk menyimpan aktivitas ini ke League dan memperoleh EXP.");
+        } else if (!response.ok) {
+          setActivityMessage(result.error ?? "Hasil tersimpan lokal, tetapi EXP belum tercatat.");
+        } else if (result.alreadyRecorded) {
+          setActivityMessage("Hasil percobaan ini sudah tercatat; EXP tidak diberikan dua kali.");
+        } else {
+          const totalAwarded = (result.expAwarded ?? 0) + (result.achievementExpAwarded ?? 0);
+          setActivityMessage(`Hasil terverifikasi. ${totalAwarded} EXP tercatat di League.`);
+        }
+      } catch {
+        setActivityMessage("Tidak dapat menghubungi server; EXP belum tercatat.");
+      }
+    })();
   }
 
   const handleDownload = useCallback(() => {
     downloadCertificate({ userName, score: correctCount, total: questions.length, achievement: achievement.title, date: completedDate.current });
   }, [userName, correctCount, questions.length, achievement.title]);
 
-  function reset() { setPhase("widget"); setQuestions([]); setAnswers({}); }
+  function reset() {
+    setPhase("widget");
+    setQuestions([]);
+    setAnswers({});
+    setAttemptId(null);
+    setActivityMessage(null);
+  }
 
   // ── 1. Widget ─────────────────────────────────────────────────────────────
   if (phase === "widget") {
@@ -420,6 +470,12 @@ export function NutriQuest({ userName = "SMANU Student" }: { userName?: string }
             </p>
           </div>
         </div>
+
+        {activityMessage && (
+          <p role="status" aria-live="polite" className="mb-4 rounded-xl border border-slate-700 bg-slate-900/60 p-3 text-center text-xs text-slate-300">
+            {activityMessage}
+          </p>
+        )}
 
         {/* Certificate for perfect score */}
         {isMaster && (

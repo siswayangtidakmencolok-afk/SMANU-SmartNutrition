@@ -1,324 +1,390 @@
 import { NextRequest } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { retrieveRelevantChunks, buildKnowledgeContext, buildSystemPrompt } from "@/lib/rag-retrieval";
+import OpenAI from "openai";
+import {
+  retrieveRelevantChunks,
+  buildKnowledgeContext,
+  buildSystemPrompt,
+  type UserContext,
+} from "@/lib/rag-retrieval";
 
 export const runtime = "nodejs";
 
 // ─────────────────────────────────────────────────────────────
-// Langflow configuration
+// Configuration
 // ─────────────────────────────────────────────────────────────
 
 const LANGFLOW_FLOW_ID =
-  process.env.LANGFLOW_FLOW_ID ||
+  process.env.LANGFLOW_FLOW_ID?.trim() ||
   "1a3246ec-c6c7-44d5-9509-66a623466633";
+
+// Path A — Langflow
+const LANGFLOW_TIMEOUT_MS = 120_000;
+
+// Path B — OpenAI direct API
+const OPENAI_MODEL = "gpt-4o-mini";
+const OPENAI_TEMPERATURE = 0.3;
+const OPENAI_MAX_TOKENS = 800;
+const OPENAI_TIMEOUT_MS = 60_000;
+
+// Path C — Gemini
+const GEMINI_MODEL = "gemini-flash-lite-latest";
+const GEMINI_TEMPERATURE = 0.35;
+const GEMINI_MAX_TOKENS = 800;
+
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Result of a single provider attempt.
+ * `chunks` holds the titles of the knowledge-base entries that were
+ * retrieved and injected into the prompt (used for the SSE `meta` event).
+ */
+type ProviderResult =
+  | { ok: true; answer: string; chunks: string[] }
+  | { ok: false; error: string };
 
 // ─────────────────────────────────────────────────────────────
 // POST /api/nutripath
 //
-// Browser → Next.js API → Langflow → Astra DB RAG → LLM → Browser
+// Browser → Next.js API → provider → SSE → Browser
+//
+// Provider selection (the first path that answers wins):
+//   A. Langflow  — used when LANGFLOW_SERVER_URL + LANGFLOW_API_KEY are set
+//   B. OpenAI    — direct API, works on Vercel with only OPENAI_API_KEY
+//   C. Gemini    — legacy fallback for existing deployments
+//
+// Every API key is read server-side only and is never sent to the browser.
 // ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // ─────────────────────────────────────────────────────────
+  // 1. Parse and validate request
+  // ─────────────────────────────────────────────────────────
+
+  let body: {
+    situation?: string;
+    availableFoods?: string;
+    budget?: string;
+    question?: string;
+    sessionId?: string;
+    session_id?: string;
+  };
+
   try {
-    const body = await req.json();
-
-    const {
-      situation,
-      availableFoods,
-      budget,
-      question,
-      sessionId,
-      session_id,
-    } = body;
-
-    // ─────────────────────────────────────────────────────────
-    // Validate request
-    // ─────────────────────────────────────────────────────────
-
-    if (!question || !situation) {
-      return new Response(
-        JSON.stringify({
-          error: "Missing required fields: situation and question",
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Validate Langflow API key
-    // ─────────────────────────────────────────────────────────
-
-    const apiKey = process.env.LANGFLOW_API_KEY;
-
-    if (!apiKey) {
-      // Log only on server — never expose to client
-      console.error("[nutripath] LANGFLOW_API_KEY is not set in environment");
-      return new Response(
-        JSON.stringify({
-          error: "AI service belum dikonfigurasi di server. Hubungi administrator.",
-        }),
-        {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // Validate that LANGFLOW_SERVER_URL is set and is not a localhost URL
-    // when running on a hosted environment (Vercel / production)
-    const serverUrl = process.env.LANGFLOW_SERVER_URL;
-    if (!serverUrl) {
-      console.error("[nutripath] LANGFLOW_SERVER_URL is not set in environment");
-      return new Response(
-        JSON.stringify({
-          error: "AI service belum dikonfigurasi di server. Hubungi administrator.",
-        }),
-        {
-          status: 503,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Session ID
-    // ─────────────────────────────────────────────────────────
-
-    const currentSessionId = sessionId || session_id || crypto.randomUUID();
-
-    // ─────────────────────────────────────────────────────────
-    // Build input_value — gabungkan context siswa ke dalam
-    // satu pesan untuk Langflow ChatInput
-    // ─────────────────────────────────────────────────────────
-
-    const inputValue = `
-Konteks siswa:
-- Situasi: ${situation}
-- Makanan yang tersedia: ${availableFoods || "tidak disebutkan"}
-- Budget: ${budget || "tidak disebutkan"}
-
-Pertanyaan siswa:
-${question}
-
-Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedia pada RAG flow. Gunakan informasi yang ditemukan melalui retrieval Astra DB. Jika informasi yang dibutuhkan tidak tersedia dalam knowledge base, katakan dengan jelas bahwa informasi tersebut tidak ditemukan.
-`.trim();
-
-    // Store context for Gemini fallback (used if Langflow is unreachable)
-    _lastRequestContext = {
-      situation,
-      availableFoods: availableFoods || undefined,
-      budget: budget || undefined,
-      question,
-    };
-
-    // ─────────────────────────────────────────────────────────
-    // Langflow endpoint
-    // ─────────────────────────────────────────────────────────
-
-    const langflowUrl = `${serverUrl}/api/v1/run/${LANGFLOW_FLOW_ID}`;
-
-    // Log non-secret diagnostic info only (no API key, no URL with embedded credentials)
-    console.log("[nutripath] request →", LANGFLOW_FLOW_ID, "| session:", currentSessionId, "| situation:", situation);
-
-    // ─────────────────────────────────────────────────────────
-    // Call Langflow
-    // ─────────────────────────────────────────────────────────
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120_000);
-
-    let langflowResponse: Response;
-
-    try {
-      langflowResponse = await fetch(langflowUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-        },
-        body: JSON.stringify({
-          input_value: inputValue,
-          input_type: "chat",
-          output_type: "chat",
-          session_id: currentSessionId,
-        }),
-        signal: controller.signal,
-        cache: "no-store",
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Handle Langflow HTTP error
-    // ─────────────────────────────────────────────────────────
-
-    if (!langflowResponse.ok) {
-      // Log status on server only — never forward raw Langflow body to client
-      // (it may contain internal credentials, headers, or token details)
-      console.error("[nutripath] Langflow HTTP error:", langflowResponse.status);
-      return new Response(
-        JSON.stringify({
-          error: "Maaf, SMANU AI sedang mengalami masalah. Silakan coba lagi.",
-        }),
-        {
-          status: 502,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Parse Langflow response
-    // ─────────────────────────────────────────────────────────
-
-    const langflowData = await langflowResponse.json();
-    const answer = extractLangflowAnswer(langflowData);
-
-    if (!answer) {
-      console.error(
-        "Tidak menemukan text jawaban di response Langflow:",
-        JSON.stringify(langflowData, null, 2)
-      );
-      return new Response(
-        JSON.stringify({
-          error:
-            "Langflow berhasil dipanggil, tetapi ChatOutput tidak mengandung jawaban yang dapat dibaca.",
-        }),
-        {
-          status: 502,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // Stream SSE response ke frontend
-    //
-    // Protocol:
-    //   data: { type: "meta", source: "langflow", chunks: [], sessionId }
-    //   data: { type: "token", content: "<full answer>" }
-    //   data: { type: "done" }
-    // ─────────────────────────────────────────────────────────
-
-    const encoder = new TextEncoder();
-
-    const stream = new ReadableStream({
-      start(ctrl) {
-        try {
-          // META — beri tahu frontend bahwa ini dari Langflow
-          ctrl.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({
-                type: "meta",
-                source: "langflow",
-                orchestration: "Langflow RAG",
-                flowId: LANGFLOW_FLOW_ID,
-                sessionId: currentSessionId,
-                // chunks kosong agar frontend lama tidak crash pada .map()
-                chunks: [],
-              })}\n\n`
-            )
-          );
-
-          // TOKEN — kirim full answer
-          ctrl.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ type: "token", content: answer })}\n\n`
-            )
-          );
-
-          // DONE
-          ctrl.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`)
-          );
-
-          ctrl.close();
-        } catch (streamError) {
-          console.error("SSE stream error:", streamError);
-          ctrl.error(streamError);
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
-  } catch (error: unknown) {
-    console.error("SMANU Langflow API error:", error);
-
-    // ── Gemini fallback ───────────────────────────────────
-    // If Langflow is unreachable (localhost not running, cloud not configured),
-    // try answering with Gemini + local RAG knowledge base.
-    // The SSE output format is identical so the frontend needs no changes.
-    const isConnError =
-      error instanceof Error &&
-      (error.message.includes("ECONNREFUSED") ||
-        error.message.includes("fetch failed") ||
-        error.message.includes("ABORT_ERR") ||
-        error.message.includes("aborted") ||
-        error.message.includes("network"));
-
-    if (isConnError) {
-      const body = await tryGeminiRagFallback(error);
-      if (body) return body;
-    }
-
-    const userMessage =
-      error instanceof Error && error.message.includes("LANGFLOW_API_KEY")
-        ? "Konfigurasi server belum lengkap. Hubungi administrator."
-        : "Tidak dapat terhubung ke SMANU AI. Silakan coba lagi.";
-
-    return new Response(JSON.stringify({ error: userMessage }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    body = await req.json();
+  } catch {
+    return jsonResponse({ error: "Format request tidak valid." }, 400);
   }
+
+  const {
+    situation,
+    availableFoods,
+    budget,
+    question,
+    sessionId,
+    session_id,
+  } = body;
+
+  if (!question || !situation) {
+    return jsonResponse(
+      { error: "Missing required fields: situation and question" },
+      400
+    );
+  }
+
+  // Shared context object — consumed identically by every provider path
+  const ctx: UserContext = {
+    situation,
+    availableFoods: availableFoods || undefined,
+    budget: budget || undefined,
+    question,
+  };
+
+  const currentSessionId = sessionId || session_id || crypto.randomUUID();
+
+  // ─────────────────────────────────────────────────────────
+  // 2. Provider availability
+  // ─────────────────────────────────────────────────────────
+
+  // Read the provider credentials. Values are trimmed so that a stray
+  // whitespace-only or trailing-space env var (e.g. "KEY= " in a shell)
+  // is treated as "not configured" instead of producing a malformed URL
+  // or an "unauthorized" request.
+  const langflowApiKey = process.env.LANGFLOW_API_KEY?.trim();
+  const langflowServerUrl = process.env.LANGFLOW_SERVER_URL?.trim();
+  const openaiApiKey = process.env.OPENAI_API_KEY?.trim();
+  const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+
+  const langflowConfigured = Boolean(langflowApiKey && langflowServerUrl);
+
+  if (!langflowConfigured && !openaiApiKey && !geminiApiKey) {
+    console.error(
+      "[nutripath] No AI provider configured (need LANGFLOW_SERVER_URL + LANGFLOW_API_KEY, or OPENAI_API_KEY, or GEMINI_API_KEY)"
+    );
+    return jsonResponse(
+      { error: "AI service belum dikonfigurasi di server. Hubungi administrator." },
+      503
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 3. Path A — Langflow (primary when fully configured)
+  // ─────────────────────────────────────────────────────────
+
+  if (langflowConfigured) {
+    const result = await callLangflow({
+      apiKey: langflowApiKey as string,
+      serverUrl: langflowServerUrl as string,
+      ctx,
+      sessionId: currentSessionId,
+    });
+
+    if (result.ok) {
+      return sseResponse({
+        source: "langflow",
+        orchestration: "Langflow RAG",
+        answer: result.answer,
+        chunks: result.chunks,
+        extra: { flowId: LANGFLOW_FLOW_ID, sessionId: currentSessionId },
+      });
+    }
+
+    console.error("[nutripath] Langflow path failed:", result.error);
+    return jsonResponse({ error: getLangflowFailureMessage(result.error) }, 502);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 4. Path B — OpenAI direct API (RAG-grounded)
+  // ─────────────────────────────────────────────────────────
+
+  if (openaiApiKey) {
+    const result = await callOpenAI(ctx, openaiApiKey);
+
+    if (result.ok) {
+      return sseResponse({
+        source: "openai",
+        orchestration: "OpenAI + Local KB",
+        answer: result.answer,
+        chunks: result.chunks,
+        extra: { sessionId: currentSessionId },
+      });
+    }
+
+    console.error("[nutripath] OpenAI path failed:", result.error);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 5. Path C — Gemini (legacy fallback)
+  // ─────────────────────────────────────────────────────────
+
+  if (geminiApiKey) {
+    const result = await callGeminiRag(ctx, geminiApiKey);
+
+    if (result.ok) {
+      return sseResponse({
+        source: "gemini-rag-fallback",
+        orchestration: "Gemini + Local KB",
+        answer: result.answer,
+        chunks: result.chunks,
+        extra: { sessionId: currentSessionId },
+      });
+    }
+
+    console.error("[nutripath] Gemini path failed:", result.error);
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // 6. Every configured provider failed
+  // ─────────────────────────────────────────────────────────
+
+  return jsonResponse(
+    { error: "Maaf, SMANU AI sedang mengalami masalah. Silakan coba lagi." },
+    502
+  );
 }
 
 // ─────────────────────────────────────────────────────────────
-// Gemini RAG fallback
-// Used when Langflow is unreachable (local dev without Desktop running,
-// or production before Langflow Cloud is configured).
-// Reads GEMINI_API_KEY server-side — never exposed to browser.
+// Path A — Langflow
 // ─────────────────────────────────────────────────────────────
 
-async function tryGeminiRagFallback(
-  originalError: unknown
-): Promise<Response | null> {
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (!geminiKey) {
-    console.warn("[nutripath] Gemini fallback skipped — GEMINI_API_KEY not set");
-    return null;
-  }
+async function callLangflow(params: {
+  apiKey: string;
+  serverUrl: string;
+  ctx: UserContext;
+  sessionId: string;
+}): Promise<ProviderResult> {
+  const { apiKey, serverUrl, ctx, sessionId } = params;
 
-  // We need to re-read the request body — but it's already been consumed.
-  // We stored the relevant fields in the closure of the caller. Since we can't
-  // pass them here easily, we use a module-level store set before the Langflow call.
-  const ctx = _lastRequestContext;
-  if (!ctx) return null;
+  const langflowUrl = `${serverUrl}/api/v1/run/${LANGFLOW_FLOW_ID}`;
+
+  // Log non-secret diagnostic info only (no API key, no URL with embedded credentials)
+  console.log(
+    "[nutripath] request →",
+    LANGFLOW_FLOW_ID,
+    "| session:",
+    sessionId,
+    "| situation:",
+    ctx.situation
+  );
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LANGFLOW_TIMEOUT_MS);
+
+  let langflowResponse: Response;
 
   try {
-    console.log("[nutripath] Langflow unreachable, trying Gemini RAG fallback");
+    langflowResponse = await fetch(langflowUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        input_value: buildLangflowInput(ctx),
+        input_type: "chat",
+        output_type: "chat",
+        session_id: sessionId,
+      }),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return { ok: false, error: "timeout" };
+    }
+    const cause = err instanceof Error ? err.cause : undefined;
+    const causeCode =
+      typeof cause === "object" &&
+      cause !== null &&
+      "code" in cause &&
+      typeof cause.code === "string"
+        ? cause.code
+        : null;
+    return {
+      ok: false,
+      error: causeCode ? `network:${causeCode}` : "network:unknown",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 
-    // Retrieve relevant chunks from local knowledge base
+  // Log status on server only — never forward the raw Langflow body to the
+  // client (it may contain internal credentials, headers, or token details).
+  if (!langflowResponse.ok) {
+    return { ok: false, error: `HTTP ${langflowResponse.status}` };
+  }
+
+  let langflowData: unknown;
+  try {
+    langflowData = await langflowResponse.json();
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Invalid JSON response",
+    };
+  }
+
+  const answer = extractLangflowAnswer(langflowData);
+  if (!answer) {
+    return { ok: false, error: "ChatOutput did not contain a readable answer" };
+  }
+
+  return { ok: true, answer, chunks: [] };
+}
+
+function getLangflowFailureMessage(error: string): string {
+  if (error === "network:ECONNREFUSED" || error === "network:ENOTFOUND" || error === "network:ETIMEDOUT") {
+    return "Server Langflow tidak dapat dijangkau. Periksa URL dan pastikan server Langflow aktif.";
+  }
+  if (error === "timeout") {
+    return "Langflow tidak merespons tepat waktu. Coba lagi beberapa saat.";
+  }
+  if (error === "HTTP 401" || error === "HTTP 403") {
+    return "Akses Langflow ditolak. Periksa konfigurasi kunci API di server.";
+  }
+  if (error === "HTTP 404") {
+    return "Flow Langflow tidak ditemukan. Periksa konfigurasi ID flow di server.";
+  }
+  if (error === "Invalid JSON response" || error === "ChatOutput did not contain a readable answer") {
+    return "Langflow mengirim respons yang tidak dapat dibaca. Periksa output flow.";
+  }
+  return "Langflow gagal memproses pertanyaan. Periksa log server lalu coba lagi.";
+}
+
+// ─────────────────────────────────────────────────────────────
+// Path B — OpenAI direct API
+//
+// Uses the same RAG pipeline as the other providers: retrieveRelevantChunks()
+// → buildKnowledgeContext() → buildSystemPrompt(). The model is grounded in
+// the local knowledge base rather than answering from general knowledge.
+// ─────────────────────────────────────────────────────────────
+
+async function callOpenAI(
+  ctx: UserContext,
+  apiKey: string
+): Promise<ProviderResult> {
+  try {
     const chunks = retrieveRelevantChunks(ctx, 5);
     const knowledgeContext = buildKnowledgeContext(chunks);
     const systemPrompt = buildSystemPrompt(ctx, knowledgeContext);
 
-    const genAI = new GoogleGenerativeAI(geminiKey);
-    // gemini-flash-lite-latest: confirmed working with AQ. keys
+    const client = new OpenAI({
+      apiKey,
+      timeout: OPENAI_TIMEOUT_MS,
+      maxRetries: 1,
+    });
+
+    const completion = await client.chat.completions.create({
+      model: OPENAI_MODEL,
+      temperature: OPENAI_TEMPERATURE,
+      max_completion_tokens: OPENAI_MAX_TOKENS,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Pertanyaan siswa: ${ctx.question}` },
+      ],
+    });
+
+    const answer = completion.choices[0]?.message?.content?.trim();
+    if (!answer) {
+      return { ok: false, error: "Empty response from OpenAI" };
+    }
+
+    return {
+      ok: true,
+      answer,
+      chunks: chunks.map((c) => c.entry.title),
+    };
+  } catch (err) {
+    // Log server-side only — never expose raw error details to the client
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Path C — Gemini (legacy fallback)
+// ─────────────────────────────────────────────────────────────
+
+async function callGeminiRag(
+  ctx: UserContext,
+  apiKey: string
+): Promise<ProviderResult> {
+  try {
+    const chunks = retrieveRelevantChunks(ctx, 5);
+    const knowledgeContext = buildKnowledgeContext(chunks);
+    const systemPrompt = buildSystemPrompt(ctx, knowledgeContext);
+
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-flash-lite-latest",
-      generationConfig: { temperature: 0.35, maxOutputTokens: 800 },
+      model: GEMINI_MODEL,
+      generationConfig: {
+        temperature: GEMINI_TEMPERATURE,
+        maxOutputTokens: GEMINI_MAX_TOKENS,
+      },
     });
 
     const result = await model.generateContent([
@@ -327,46 +393,112 @@ async function tryGeminiRagFallback(
     ]);
 
     const answer = result.response.text().trim();
-    if (!answer) return null;
+    if (!answer) {
+      return { ok: false, error: "Empty response from Gemini" };
+    }
 
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(ctrl) {
-        ctrl.enqueue(encoder.encode(
-          `data: ${JSON.stringify({
-            type: "meta",
-            source: "gemini-rag-fallback",
-            orchestration: "Gemini + Local KB",
-            chunks: chunks.map((c) => c.entry.title),
-          })}\n\n`
-        ));
-        ctrl.enqueue(encoder.encode(
-          `data: ${JSON.stringify({ type: "token", content: answer })}\n\n`
-        ));
-        ctrl.enqueue(encoder.encode(
-          `data: ${JSON.stringify({ type: "done" })}\n\n`
-        ));
-        ctrl.close();
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
-  } catch (fallbackErr) {
-    console.error("[nutripath] Gemini fallback also failed:", fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr));
-    return null;
+    return {
+      ok: true,
+      answer,
+      chunks: chunks.map((c) => c.entry.title),
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
-// Module-level store so the fallback function can access request context
-// after the request body has been read.
-let _lastRequestContext: import("@/lib/rag-retrieval").UserContext | null = null;
+// ─────────────────────────────────────────────────────────────
+// Response helpers
+// ─────────────────────────────────────────────────────────────
+
+/** JSON error response with the given status code. */
+function jsonResponse(payload: { error: string }, status: number): Response {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+/**
+ * Wrap an answer in the SSE envelope the frontend already parses:
+ *   data: { type: "meta",  source, orchestration, chunks, ... }
+ *   data: { type: "token", content: "<full answer>" }
+ *   data: { type: "done" }
+ */
+function sseResponse(params: {
+  source: string;
+  orchestration: string;
+  answer: string;
+  chunks: string[];
+  extra?: Record<string, unknown>;
+}): Response {
+  const { source, orchestration, answer, chunks, extra } = params;
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    start(ctrl) {
+      try {
+        // META — tell the frontend which provider answered
+        ctrl.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({
+              type: "meta",
+              source,
+              orchestration,
+              // chunks kosong agar frontend lama tidak crash pada .map()
+              chunks,
+              ...extra,
+            })}\n\n`
+          )
+        );
+
+        // TOKEN — kirim full answer
+        ctrl.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ type: "token", content: answer })}\n\n`
+          )
+        );
+
+        // DONE
+        ctrl.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`)
+        );
+
+        ctrl.close();
+      } catch (streamError) {
+        console.error("SSE stream error:", streamError);
+        ctrl.error(streamError);
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+/** Gabungkan context siswa ke dalam satu pesan untuk Langflow ChatInput. */
+function buildLangflowInput(ctx: UserContext): string {
+  return `
+Konteks siswa:
+- Situasi: ${ctx.situation}
+- Makanan yang tersedia: ${ctx.availableFoods || "tidak disebutkan"}
+- Budget: ${ctx.budget || "tidak disebutkan"}
+
+Pertanyaan siswa:
+${ctx.question}
+
+Jawablah pertanyaan berdasarkan knowledge base SMANU SmartNutrition yang tersedia pada RAG flow. Gunakan informasi yang ditemukan melalui retrieval Astra DB. Jika informasi yang dibutuhkan tidak tersedia dalam knowledge base, katakan dengan jelas bahwa informasi tersebut tidak ditemukan.
+  `.trim();
+}
 
 // ─────────────────────────────────────────────────────────────
 // Extract answer text from Langflow /api/v1/run/{flow_id} response

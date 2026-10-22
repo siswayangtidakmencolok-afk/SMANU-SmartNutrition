@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   SCENARIOS,
@@ -308,14 +307,14 @@ function ScoreCircle({ score }: { score: number }) {
 
 // ── Main Page ─────────────────────────────────────────────────────────────
 export default function FoodChallengePage() {
-  const router = useRouter();
-
   // ── State ────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<Tab>("simulation");
   const [activeScenario, setActiveScenario] = useState<Scenario>(SCENARIOS[0]);
   const [selectedFoodIds, setSelectedFoodIds] = useState<string[]>([]);
   const [scoreResult, setScoreResult] = useState<ChallengeScore | null>(null);
   const [saved, setSaved] = useState(false);
+  const [activityMessage, setActivityMessage] = useState<string | null>(null);
+  const activityAttemptId = useRef<string | null>(null);
   const [foodFilter, setFoodFilter] = useState<FoodFilter>("all");
   const [foodSearch, setFoodSearch] = useState("");
   const [priceAnim, setPriceAnim] = useState(false);
@@ -380,30 +379,66 @@ export default function FoodChallengePage() {
   }
 
   function handleSubmit() {
+    if (saved || selectedFoodIds.length < 2) return;
+    const attemptId = activityAttemptId.current ?? crypto.randomUUID();
+    activityAttemptId.current = attemptId;
     const result = scoreChallengeSelection(selectedFoodIds, activeScenario);
     setScoreResult(result);
     setActiveTab("evaluation");
-    if (!saved) {
-      setSaved(true);
-      saveChallengeResult({
-        id: crypto.randomUUID(),
-        scenarioId: activeScenario.id,
-        scenarioTitle: activeScenario.title,
-        score: result.score,
-        withinBudget: result.withinBudget,
-        totalPrice: result.totalPrice,
-        selectedFoodIds,
-        timestamp: Date.now(),
-        relatedDomains: activeScenario.relatedDomains,
-        relatedKnowledgeIds: activeScenario.relatedKnowledgeIds,
-      });
-    }
+    setSaved(true);
+    saveChallengeResult({
+      id: attemptId,
+      scenarioId: activeScenario.id,
+      scenarioTitle: activeScenario.title,
+      score: result.score,
+      withinBudget: result.withinBudget,
+      totalPrice: result.totalPrice,
+      selectedFoodIds,
+      timestamp: Date.now(),
+      relatedDomains: activeScenario.relatedDomains,
+      relatedKnowledgeIds: activeScenario.relatedKnowledgeIds,
+    });
+    setActivityMessage("Memverifikasi hasil Food Challenge untuk pencatatan EXP…");
+    void (async () => {
+      try {
+        const response = await fetch("/api/user/activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            activityType: "challenge",
+            sourceRef: attemptId,
+            scenarioId: activeScenario.id,
+            selectedFoodIds,
+          }),
+        });
+        const responseData = await response.json() as {
+          error?: string;
+          expAwarded?: number;
+          achievementExpAwarded?: number;
+          alreadyRecorded?: boolean;
+        };
+        if (response.status === 401) {
+          setActivityMessage("Masuk untuk menyimpan aktivitas ini ke League dan memperoleh EXP.");
+        } else if (!response.ok) {
+          setActivityMessage(responseData.error ?? "Hasil tersimpan lokal, tetapi EXP belum tercatat.");
+        } else if (responseData.alreadyRecorded) {
+          setActivityMessage("Hasil percobaan ini sudah tercatat; EXP tidak diberikan dua kali.");
+        } else {
+          const totalAwarded = (responseData.expAwarded ?? 0) + (responseData.achievementExpAwarded ?? 0);
+          setActivityMessage(`Hasil terverifikasi. ${totalAwarded} EXP tercatat di League.`);
+        }
+      } catch {
+        setActivityMessage("Tidak dapat menghubungi server; EXP belum tercatat.");
+      }
+    })();
   }
 
   function handleReset() {
     setSelectedFoodIds([]);
     setScoreResult(null);
     setSaved(false);
+    setActivityMessage(null);
+    activityAttemptId.current = null;
     setActiveTab("simulation");
   }
 
@@ -412,6 +447,8 @@ export default function FoodChallengePage() {
     setSelectedFoodIds([]);
     setScoreResult(null);
     setSaved(false);
+    setActivityMessage(null);
+    activityAttemptId.current = null;
     setActiveTab("simulation");
   }
 
@@ -840,6 +877,12 @@ export default function FoodChallengePage() {
             </div>
           ) : (
             <>
+              {activityMessage && (
+                <p role="status" aria-live="polite" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                  {activityMessage}
+                </p>
+              )}
+
               {/* Score banner */}
               <div className="bg-white rounded-2xl shadow-sm p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">

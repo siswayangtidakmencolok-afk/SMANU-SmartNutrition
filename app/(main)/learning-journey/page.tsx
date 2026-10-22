@@ -3,9 +3,88 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { computeLearningJourney, LearningJourneySummary } from "@/lib/learning-journey-store";
+import {
+  DOMAIN_TO_KNOWLEDGE,
+  KNOWLEDGE_META,
+  type DomainStat,
+  type RecommendedTopic,
+} from "@/lib/learning-journey-store";
 import { formatRelativeTime } from "@/lib/history-store";
 import { useAuth } from "@/context/AuthContext";
+
+interface LearningProfileData {
+  questCount: number;
+  challengeCount: number;
+  domainStats: { domain: string; attempts: number; averagePct: number; bestPct: number }[];
+  latestQuestActivity: ActivitySummary | null;
+  latestChallengeActivity: ActivitySummary | null;
+  recentScoredActivities: (ActivitySummary & { activityType: "quest" | "challenge"; score: number })[];
+}
+
+interface ActivitySummary {
+  id: string;
+  activityType: string;
+  activityLabel: string;
+  score: number | null;
+  domain: string | null;
+  occurredAt: string;
+}
+
+interface LearningJourneySummary {
+  totalActivities: number;
+  questAttempts: number;
+  challengeAttempts: number;
+  domainStats: DomainStat[];
+  weakDomains: DomainStat[];
+  strongDomains: DomainStat[];
+  topRecommendations: RecommendedTopic[];
+  hasEnoughData: boolean;
+  latestQuestActivity: ActivitySummary | null;
+  latestChallengeActivity: ActivitySummary | null;
+  recentScoredActivities: LearningProfileData["recentScoredActivities"];
+}
+
+function buildJourneySummary(profile: LearningProfileData): LearningJourneySummary {
+  const domainStats: DomainStat[] = profile.domainStats.map((domain) => ({
+    ...domain,
+    recommendedKnowledgeIds: DOMAIN_TO_KNOWLEDGE[domain.domain] ?? [],
+    needsReview: domain.averagePct < 70,
+    trend: "insufficient",
+  }));
+  const weakDomains = domainStats.filter((domain) => domain.needsReview);
+  const strongDomains = domainStats.filter((domain) => domain.averagePct >= 80);
+  const recommendations = new Map<string, RecommendedTopic>();
+
+  for (const domain of weakDomains) {
+    for (const knowledgeId of domain.recommendedKnowledgeIds) {
+      const topic = KNOWLEDGE_META[knowledgeId];
+      if (!topic || recommendations.has(knowledgeId)) continue;
+      recommendations.set(knowledgeId, {
+        knowledgeId,
+        title: topic.title,
+        category: topic.category,
+        reason: `Nilai rata-rata domain "${domain.domain}" masih ${domain.averagePct}%. Pelajari kembali materi ini untuk memperkuat pemahaman.`,
+        priority: "high",
+        relatedDomain: domain.domain,
+      });
+    }
+  }
+
+  const totalActivities = profile.questCount + profile.challengeCount;
+  return {
+    totalActivities,
+    questAttempts: profile.questCount,
+    challengeAttempts: profile.challengeCount,
+    domainStats,
+    weakDomains,
+    strongDomains,
+    topRecommendations: [...recommendations.values()].slice(0, 5),
+    hasEnoughData: totalActivities >= 2,
+    latestQuestActivity: profile.latestQuestActivity,
+    latestChallengeActivity: profile.latestChallengeActivity,
+    recentScoredActivities: profile.recentScoredActivities,
+  };
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -145,27 +224,22 @@ function EmptyState({ isGuest }: { isGuest: boolean }) {
 
 // ── Mini SVG trend chart (7 data points) ──────────────────────────────────────
 
-function MiniTrendChart({ questScores, challengeScores }: { questScores: number[]; challengeScores: number[] }) {
-  // Normalise to last 7 data points each
-  const q = questScores.slice(-7);
-  const c = challengeScores.slice(-7);
-
-  function buildPoints(arr: number[], total: number) {
-    if (!arr.length) return "";
-    const w = 280, h = 100;
-    const step = total > 1 ? w / (total - 1) : 0;
-    return arr.map((v, i) => {
-      const x = i * step;
-      const y = h - (v / 100) * h;
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    }).join(" ");
-  }
-
-  const totalPts = Math.max(q.length, c.length, 2);
-  const qPoints = buildPoints(q, totalPts);
-  const cPoints = buildPoints(c, totalPts);
-
-  const days = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].slice(0, totalPts);
+function MiniTrendChart({ activities }: { activities: LearningProfileData["recentScoredActivities"] }) {
+  const validActivities = activities.flatMap((activity) => {
+    const timestamp = new Date(activity.occurredAt).getTime();
+    return Number.isFinite(timestamp) ? [{ ...activity, timestamp }] : [];
+  });
+  const firstTime = Math.min(...validActivities.map((activity) => activity.timestamp));
+  const lastTime = Math.max(...validActivities.map((activity) => activity.timestamp));
+  const timeSpan = lastTime - firstTime;
+  const points = validActivities.map((activity) => ({
+    type: activity.activityType,
+    x: timeSpan > 0 ? ((activity.timestamp - firstTime) / timeSpan) * 280 : 140,
+    y: 100 - (activity.score / 100) * 100,
+  }));
+  const questPoints = points.filter((point) => point.type === "quest");
+  const challengePoints = points.filter((point) => point.type === "challenge");
+  const toPolyline = (items: typeof points) => items.map(({ x, y }) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
 
   return (
     <div className="w-full">
@@ -175,45 +249,29 @@ function MiniTrendChart({ questScores, challengeScores }: { questScores: number[
           {[20, 60, 100].map((y) => (
             <line key={y} x1="0" x2="300" y1={y} y2={y} stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3 3" />
           ))}
-          {/* Quest line (green) */}
-          {qPoints && (
+          {questPoints.length > 0 && (
             <>
-              <defs>
-                <linearGradient id="qGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#059669" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#059669" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <polygon
-                fill="url(#qGrad)"
-                points={`0,120 ${qPoints} 280,120`}
-              />
-              <polyline
-                fill="none"
-                stroke="#059669"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={qPoints}
-              />
+              {questPoints.length > 1 && <polyline fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" points={toPolyline(questPoints)} />}
+              {questPoints.map((point, index) => <circle key={`quest-${index}`} cx={point.x} cy={point.y} r="3" fill="#059669" />)}
             </>
           )}
-          {/* Challenge line (teal) */}
-          {cPoints && (
-            <polyline
-              fill="none"
-              stroke="#0d9488"
-              strokeWidth="2"
-              strokeDasharray="4 2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              points={cPoints}
-            />
+          {challengePoints.length > 0 && (
+            <>
+              {challengePoints.length > 1 && <polyline fill="none" stroke="#0d9488" strokeWidth="2" strokeDasharray="4 2" strokeLinecap="round" strokeLinejoin="round" points={toPolyline(challengePoints)} />}
+              {challengePoints.map((point, index) => <circle key={`challenge-${index}`} cx={point.x} cy={point.y} r="3" fill="#0d9488" />)}
+            </>
           )}
         </svg>
+        {points.length === 0 && (
+          <p className="absolute inset-0 flex items-center justify-center text-xs text-slate-400">
+            Belum ada skor tersimpan dalam 7 hari terakhir.
+          </p>
+        )}
       </div>
       <div className="flex justify-between text-[10px] text-slate-400 font-medium px-1 mt-1">
-        {days.map((d) => <span key={d}>{d}</span>)}
+        {validActivities.length > 0
+          ? <><span>{new Date(firstTime).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span><span>{new Date(lastTime).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</span></>
+          : <span>Belum ada rentang data</span>}
       </div>
     </div>
   );
@@ -225,35 +283,63 @@ export default function LearningJourneyPage() {
   const { isGuest, isLoading, user } = useAuth();
   const [summary, setSummary] = useState<LearningJourneySummary | null>(null);
   const [timelineFilter, setTimelineFilter] = useState<"all" | "quest" | "challenge">("all");
-  const [mounted, setMounted] = useState(false);
+  const [journeyLoaded, setJourneyLoaded] = useState(false);
+  const [journeyError, setJourneyError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
-    setSummary(computeLearningJourney());
-  }, []);
+    if (isLoading) return;
+    const controller = new AbortController();
+
+    async function loadJourney() {
+      if (isGuest) {
+        setSummary(null);
+        setJourneyError(null);
+        setJourneyLoaded(true);
+        return;
+      }
+
+      setJourneyError(null);
+      setJourneyLoaded(false);
+      try {
+        const response = await fetch("/api/user/learning-profile", { signal: controller.signal });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null) as { error?: string } | null;
+          throw new Error(payload?.error ?? `Gagal memuat Learning Journey (${response.status}).`);
+        }
+        const profile = await response.json() as LearningProfileData;
+        if (!Array.isArray(profile.domainStats) || !Array.isArray(profile.recentScoredActivities)) {
+          throw new Error("Respons Learning Journey tidak valid.");
+        }
+        setSummary(buildJourneySummary(profile));
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setJourneyError(error instanceof Error ? error.message : "Gagal memuat Learning Journey.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setJourneyLoaded(true);
+      }
+    }
+
+    void loadJourney();
+    return () => controller.abort();
+  }, [isGuest, isLoading, user?.id, retry]);
 
   // Build timeline rows from both result sets
   const timelineItems = useMemo(() => {
     if (!summary) return [];
-    const questItems = (summary.latestQuestResult ? [summary.latestQuestResult] : []).map((r) => ({
-      type: "quest" as const,
-      title: `NutriQuest · ${r.domain}`,
-      subtitle: `Kuis · ${r.total} soal`,
-      score: r.pct,
-      time: r.timestamp,
-      icon: "quiz",
-      iconBg: "bg-teal-100 text-teal-700",
-    }));
-    const challengeItems = (summary.latestChallengeResult ? [summary.latestChallengeResult] : []).map((r) => ({
-      type: "challenge" as const,
-      title: `Food Challenge · ${r.scenarioTitle}`,
-      subtitle: "Tantangan",
-      score: r.score,
-      time: r.timestamp,
-      icon: "lunch_dining",
-      iconBg: "bg-emerald-100 text-emerald-700",
-    }));
-    return [...questItems, ...challengeItems].sort((a, b) => b.time - a.time);
+    return [summary.latestQuestActivity, summary.latestChallengeActivity]
+      .filter((activity): activity is ActivitySummary => activity !== null && activity.score !== null)
+      .map((activity) => ({
+        type: activity.activityType as "quest" | "challenge",
+        title: activity.activityLabel,
+        subtitle: "Terverifikasi",
+        score: activity.score ?? 0,
+        time: new Date(activity.occurredAt).getTime(),
+        icon: activity.activityType === "quest" ? "quiz" : "lunch_dining",
+        iconBg: activity.activityType === "quest" ? "bg-teal-100 text-teal-700" : "bg-emerald-100 text-emerald-700",
+      }))
+      .sort((a, b) => b.time - a.time);
   }, [summary]);
 
   const filteredTimeline = timelineItems.filter((i) =>
@@ -261,7 +347,7 @@ export default function LearningJourneyPage() {
   );
 
   // Loading skeleton
-  if (!mounted || isLoading) {
+  if (isLoading || (!isGuest && !journeyLoaded)) {
     return (
       <div className="flex flex-col gap-5">
         <div className="h-40 rounded-2xl bg-slate-200 animate-pulse" />
@@ -273,15 +359,8 @@ export default function LearningJourneyPage() {
     );
   }
 
-  const hasData = summary && summary.totalActivities > 0;
-
-  // Quest scores for chart (latest first → reverse for chronological)
-  const questChartScores = summary?.domainStats
-    .flatMap((d) => Array(d.attempts).fill(d.averagePct))
-    .slice(-7).reverse() ?? [];
-  const challengeChartScores = summary?.latestChallengeResult
-    ? [summary.latestChallengeResult.score]
-    : [];
+  const visibleSummary = isGuest ? null : summary;
+  const hasData = visibleSummary && visibleSummary.totalActivities > 0;
 
   return (
     <div className="flex flex-col gap-5 pb-6">
@@ -331,26 +410,26 @@ export default function LearningJourneyPage() {
                 </div>
               </div>
 
-              {hasData && summary ? (
+              {hasData && visibleSummary ? (
                 <>
                   <div className="flex flex-col gap-1">
                     <div className="flex justify-between text-[11px]">
                       <span className="text-[#bec6e0]">Target Aktivitas</span>
                       <span className="text-[#6cf8bb] font-bold">
-                        {Math.min(100, Math.round((summary.totalActivities / 10) * 100))}%
+                        {Math.min(100, Math.round((visibleSummary.totalActivities / 10) * 100))}%
                       </span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-white/10 overflow-hidden">
                       <div
                         className="h-full bg-[#6cf8bb] rounded-full transition-all"
-                        style={{ width: `${Math.min(100, Math.round((summary.totalActivities / 10) * 100))}%` }}
+                        style={{ width: `${Math.min(100, Math.round((visibleSummary.totalActivities / 10) * 100))}%` }}
                       />
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-[#bec6e0] flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px] text-[#6cf8bb]">check_circle</span>
-                      {summary.totalActivities} aktivitas selesai
+                      {visibleSummary.totalActivities} aktivitas selesai
                     </span>
                     <span className="bg-[#6cf8bb]/20 text-[#6cf8bb] px-2 py-0.5 rounded-full text-[10px] font-semibold">
                       {isGuest ? "Tamu" : "Aktif"}
@@ -384,31 +463,33 @@ export default function LearningJourneyPage() {
         {[
           {
             label: "Total Aktivitas",
-            value: summary?.totalActivities ?? 0,
+            value: visibleSummary?.totalActivities ?? 0,
             sub: "quest & tantangan selesai",
             icon: "assignment_turned_in",
             iconBg: "bg-emerald-100 text-emerald-700",
           },
           {
             label: "Kuis Terakhir",
-            value: summary?.latestQuestResult ? `${summary.latestQuestResult.pct}%` : "—",
-            sub: summary?.latestQuestResult
-              ? `${summary.latestQuestResult.score}/${summary.latestQuestResult.total} benar`
+            value: visibleSummary?.latestQuestActivity?.score !== null && visibleSummary?.latestQuestActivity
+              ? `${visibleSummary.latestQuestActivity.score}%`
+              : "—",
+            sub: visibleSummary?.latestQuestActivity
+              ? "Skor divalidasi server"
               : "Belum ada kuis",
             icon: "quiz",
             iconBg: "bg-cyan-100 text-cyan-700",
           },
           {
             label: "Topik Dipelajari",
-            value: summary?.domainStats.length ?? 0,
+            value: visibleSummary?.domainStats.length ?? 0,
             sub: "dari 8 domain kurikulum",
             icon: "auto_stories",
             iconBg: "bg-indigo-100 text-indigo-700",
           },
           {
             label: "Materi Rekomendasi",
-            value: summary?.topRecommendations[0]?.title ?? "—",
-            sub: summary?.topRecommendations[0] ? "Disarankan untukmu" : "Selesaikan aktivitas dulu",
+            value: visibleSummary?.topRecommendations[0]?.title ?? "—",
+            sub: visibleSummary?.topRecommendations[0] ? "Berdasarkan hasil tersimpan" : "Selesaikan aktivitas dulu",
             icon: "water_drop",
             iconBg: "bg-slate-100 text-[#006c49]",
             isText: true,
@@ -435,9 +516,17 @@ export default function LearningJourneyPage() {
       </div>
 
       {/* ── MAIN BODY ────────────────────────────────────────────────────── */}
-      {!hasData ? (
+      {journeyError ? (
+        <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+          <p className="font-semibold">Gagal memuat Learning Journey</p>
+          <p className="mt-1">{journeyError}</p>
+          <button type="button" onClick={() => setRetry((value) => value + 1)} className="mt-3 font-bold underline">
+            Coba lagi
+          </button>
+        </div>
+      ) : !hasData ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          {isGuest && !summary?.totalActivities ? <GuestWall /> : <EmptyState isGuest={isGuest} />}
+          {isGuest ? <GuestWall /> : <EmptyState isGuest={false} />}
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -467,7 +556,7 @@ export default function LearningJourneyPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {summary!.domainStats.map((d) => {
+                {visibleSummary!.domainStats.map((d) => {
                   const level = pctLevelLabel(d.averagePct);
                   const icon = DOMAIN_ICON[d.domain] ?? "nutrition";
                   return (
@@ -495,7 +584,7 @@ export default function LearningJourneyPage() {
             </div>
 
             {/* WEAK TOPICS — needs review */}
-            {summary!.weakDomains.length > 0 && (
+            {visibleSummary!.weakDomains.length > 0 && (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center">
@@ -508,7 +597,7 @@ export default function LearningJourneyPage() {
                 </div>
 
                 <div className="flex flex-col gap-2.5">
-                  {summary!.weakDomains.map((d) => {
+                  {visibleSummary!.weakDomains.map((d) => {
                     const kid = d.recommendedKnowledgeIds[0];
                     return (
                       <div
@@ -653,14 +742,14 @@ export default function LearningJourneyPage() {
                   Challenge
                 </div>
               </div>
-              <MiniTrendChart questScores={questChartScores} challengeScores={challengeChartScores} />
+              <MiniTrendChart activities={visibleSummary!.recentScoredActivities} />
               <p className="text-[10px] text-slate-400 italic text-center mt-2 leading-relaxed">
                 Grafik merepresentasikan konsistensi latihan, bukan tolak ukur tunggal kecerdasan.
               </p>
             </div>
 
             {/* TOP RECOMMENDATION CARD */}
-            {summary!.topRecommendations.length > 0 && (
+            {visibleSummary!.topRecommendations.length > 0 && (
               <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-1.5">
@@ -668,14 +757,14 @@ export default function LearningJourneyPage() {
                     <h3 className="text-sm font-bold text-slate-900">Rekomendasi Berikutnya</h3>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
-                    AI SMANU
+                  Dari aktivitas
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 mb-3">Dari analisis progres belajarmu:</p>
 
                 {/* Top rec card */}
                 {(() => {
-                  const rec = summary!.topRecommendations[0];
+                  const rec = visibleSummary!.topRecommendations[0];
                   return (
                     <div className="rounded-xl overflow-hidden bg-slate-50 border border-slate-200">
                       {/* Colored top bar */}
@@ -726,14 +815,14 @@ export default function LearningJourneyPage() {
             )}
 
             {/* STRONG DOMAINS */}
-            {summary!.strongDomains.length > 0 && (
+            {visibleSummary!.strongDomains.length > 0 && (
               <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="material-symbols-outlined text-emerald-600 text-[18px]">emoji_events</span>
                   <p className="text-xs font-bold text-emerald-800">Domain yang Sudah Kamu Kuasai</p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {summary!.strongDomains.map((d) => (
+                  {visibleSummary!.strongDomains.map((d) => (
                     <span key={d.domain} className="text-[10px] px-2.5 py-1 rounded-lg bg-white text-emerald-800 font-semibold border border-emerald-200 shadow-sm">
                       {d.domain} · {d.bestPct}%
                     </span>

@@ -19,6 +19,15 @@ const mainNav = [
     ),
   },
   {
+    href: "/league",
+    label: "Student Nutrition League",
+    svg: (
+      <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path d="M8 21h8m-4-4v4m-7-17h14v5a7 7 0 01-14 0V4zm0 2H3v2a4 4 0 004 4m10-6h4v2a4 4 0 01-4 4" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} />
+      </svg>
+    ),
+  },
+  {
     href: "/ask-smanu",
     label: "Chat / Ask SMANU",
     svg: (

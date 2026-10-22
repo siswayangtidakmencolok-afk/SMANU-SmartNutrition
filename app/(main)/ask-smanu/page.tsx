@@ -116,6 +116,8 @@ function AskSmanuContent() {
   const streamRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const langflowSessionId = useRef<string | null>(null);
+  const requestInFlight = useRef(false);
 
   useEffect(() => {
     const q = searchParams.get("q");
@@ -141,12 +143,15 @@ function AskSmanuContent() {
   async function handleSend(e?: React.FormEvent) {
     e?.preventDefault();
     const text = inputText.trim();
-    if (!text || status === "loading" || status === "streaming") return;
+    if (!text || requestInFlight.current || status === "loading" || status === "streaming") return;
 
+    requestInFlight.current = true;
     const userMsg: Message = { id: crypto.randomUUID(), role: "user", text, timestamp: now() };
     setMessages((prev) => [...prev, userMsg]);
     setInputText("");
     setStatus("loading");
+    const sessionId = langflowSessionId.current ?? crypto.randomUUID();
+    langflowSessionId.current = sessionId;
 
     try {
       const res = await fetch("/api/nutripath", {
@@ -157,7 +162,7 @@ function AskSmanuContent() {
           availableFoods: food,
           budget,
           question: text,
-          sessionId: crypto.randomUUID(),
+          sessionId,
         }),
       });
 
@@ -217,8 +222,9 @@ function AskSmanuContent() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan. Silakan coba lagi.";
       const displayMsg = msg.includes("fetch") || msg.includes("network")
-        ? "Tidak dapat terhubung ke SMANU AI. Pastikan Langflow Desktop sedang berjalan."
+        ? "Tidak dapat terhubung ke SMANU AI. Periksa koneksi dan coba lagi."
         : msg;
+      setInputText(text);
       const errMsg: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -227,6 +233,8 @@ function AskSmanuContent() {
       };
       setMessages((prev) => [...prev, errMsg]);
       setStatus("error");
+    } finally {
+      requestInFlight.current = false;
     }
   }
 
@@ -496,7 +504,7 @@ function AskSmanuContent() {
         {/* ── Bottom input bar ─────────────────────────────────────────── */}
         <footer className="p-4 bg-white border-t border-slate-200 shrink-0 space-y-2.5">
           {/* Toolbar chips */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar min-w-0">
             {toolbarChips.map((c) => (
               <button
                 key={c.label}
@@ -510,18 +518,12 @@ function AskSmanuContent() {
           </div>
 
           {/* Text input + send */}
-          <form onSubmit={handleSend} className="relative flex items-center">
+          <form onSubmit={handleSend} className="relative flex items-center min-w-0">
             <input
               ref={inputRef}
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
               disabled={isDisabled}
               placeholder="Tanyakan tentang nutrisi, makanan, atau situasi makanmu…"
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-4 pr-14 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all disabled:opacity-50"
@@ -545,7 +547,7 @@ function AskSmanuContent() {
       </main>
 
       {/* ── RIGHT: Context panel ─────────────────────────────────────────── */}
-      <aside className="w-72 bg-white border-l border-slate-200 flex flex-col p-4 overflow-y-auto shrink-0 hidden xl:flex space-y-4">
+      <aside className="w-72 max-w-[100vw] bg-white border-l border-slate-200 flex flex-col p-4 overflow-y-auto shrink-0 hidden xl:flex space-y-4">
 
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-slate-100">
@@ -677,8 +679,8 @@ function AskSmanuContent() {
 function UserBubble({ text, timestamp }: { text: string; timestamp: string }) {
   return (
     <div className="flex justify-end pt-2">
-      <div className="max-w-xl bg-[#E0EEFF] text-slate-800 rounded-2xl rounded-tr-sm p-4 border border-blue-200/60 space-y-1.5">
-        <p className="text-sm leading-relaxed">{text}</p>
+      <div className="max-w-[85%] sm:max-w-xl min-w-0 bg-[#E0EEFF] text-slate-800 rounded-2xl rounded-tr-sm p-4 border border-blue-200/60 space-y-1.5">
+        <p className="text-sm leading-relaxed break-words">{text}</p>
         <div className="flex items-center justify-end gap-1 text-[11px] text-blue-500 font-medium">
           <span>{timestamp}</span>
           <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
@@ -714,7 +716,7 @@ function AssistantCard({
       </div>
 
       {/* Card */}
-      <div className="flex-1 max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
+      <div className="flex-1 min-w-0 max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">
 
         {isError ? (
           // Error display
@@ -739,7 +741,7 @@ function AssistantCard({
                     {situation}
                   </span>
                 </div>
-                <p className="text-sm text-slate-700 leading-relaxed">{sections[0].content}</p>
+                <p className="text-sm text-slate-700 leading-relaxed break-words">{sections[0].content}</p>
               </div>
             )}
 
@@ -782,7 +784,7 @@ function AssistantCard({
           </>
         ) : (
           // Plain text fallback
-          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{answer}</p>
+          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap break-words">{answer}</p>
         )}
 
         {/* Bottom interaction bar */}
@@ -818,7 +820,7 @@ function SectionCard({ section }: { section: StructuredSection }) {
         <span className="text-sm">{iconMap[section.variant]}</span>
         <span>{section.label}</span>
       </div>
-      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">{section.content}</p>
+      <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words">{section.content}</p>
     </div>
   );
 }

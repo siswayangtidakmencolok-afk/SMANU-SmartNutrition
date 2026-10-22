@@ -139,7 +139,7 @@ export default function AboutPage() {
           about which food to pick from what&apos;s available. Generic AI answers don&apos;t
           account for your specific context.
         </p>
-        <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="rounded-lg border border-[--color-outline-variant] bg-[--color-surface-container-low] p-3">
             <p className="text-[11px] font-semibold text-[--color-on-surface-variant] mb-2">Generic AI</p>
             <div className="text-xs text-[--color-on-surface-variant] space-y-1">
@@ -181,7 +181,7 @@ export default function AboutPage() {
       {/* Tech stack */}
       <Card>
         <h2 className="text-sm font-bold text-[--color-on-surface] mb-4">🔧 Technical Architecture</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {[
             { label: "Frontend", value: "Next.js 16 + TypeScript + Tailwind CSS v4" },
             { label: "AI Orchestration", value: "IBM Langflow + IBM Bob (LLM)" },
@@ -203,7 +203,7 @@ export default function AboutPage() {
       {/* Knowledge categories */}
       <Card>
         <h2 className="text-sm font-bold text-[--color-on-surface] mb-4">📚 Knowledge Base Categories</h2>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {[
             { emoji: "🥗", cat: "Basic Nutrition", desc: "Carbs, protein, fat, fiber, vitamins" },
             { emoji: "💧", cat: "Hydration", desc: "Water needs, beverages, dehydration" },

@@ -285,7 +285,7 @@ export function Header({ onMenuClick }: HeaderProps) {
 
   // Search container scale classes
   const searchContainerClass = [
-    "flex-1 flex justify-center",
+    "flex-1 flex justify-center min-w-0",
     "transition-all duration-300 ease-in-out",
     searchState === "submitting"
       ? "max-w-none sm:max-w-2xl scale-[1.04] z-30"
@@ -313,7 +313,7 @@ export function Header({ onMenuClick }: HeaderProps) {
         <span className="hidden lg:inline-block font-semibold text-xs text-slate-400 tracking-wider uppercase whitespace-nowrap">
           Student Portal
         </span>
-        <span className="lg:hidden font-semibold text-sm text-slate-700 truncate max-w-[120px]">
+        <span className="lg:hidden font-semibold text-sm text-slate-700 truncate max-w-[96px] sm:max-w-[140px]">
           {pageTitle}
         </span>
       </div>
@@ -583,7 +583,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           {profileOpen && (
             <>
               <div className="fixed inset-0 z-30" onClick={() => setProfileOpen(false)} />
-              <div className="absolute right-0 top-12 w-52 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-40 overflow-hidden">
+              <div className="absolute right-0 top-12 w-52 max-w-[calc(100vw-16px)] bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-40 overflow-hidden">
                 <div className="px-4 py-3 border-b border-slate-100">
                   {isGuest ? (
                     <div>

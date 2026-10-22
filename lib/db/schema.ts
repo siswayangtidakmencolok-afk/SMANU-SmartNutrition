@@ -5,6 +5,7 @@
  * Phase 2: food_items + food_scan_logs (AI Food Scanner)
  * Phase 3: candidate_foods (user feedback loop)
  * Phase 4: user_activities + user_exp_ledger (Learning Profile — DB-backed)
+ * Phase 5: achievements + user_achievements (Student Nutrition League)
  *          photo_contributions (dataset consent loop)
  *
  * Migrations: run `npx drizzle-kit generate` then `npx drizzle-kit migrate`
@@ -237,6 +238,9 @@ export const userActivities = pgTable("user_activities", {
   // Format: `${userId}:${activityType}:${sourceRef}`
   idempotencyKey: text("idempotency_key").notNull(),
 
+  // Only server-verified activity records can contribute to League progress.
+  verified: boolean("verified").notNull().default(false),
+
   occurredAt: timestamp("occurred_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -268,7 +272,37 @@ export const userExpLedger = pgTable("user_exp_ledger", {
   // Idempotency key (same as the activity's key)
   idempotencyKey: text("idempotency_key").notNull(),
 
+  // Legacy ledger rows default to unverified; new server-calculated awards set true.
+  verified: boolean("verified").notNull().default(false),
+
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEAGUE ACHIEVEMENTS — definitions and per-user unlock records
+// ─────────────────────────────────────────────────────────────────────────────
+export const achievements = pgTable("achievements", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  key: text("key").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull().default("🏅"),
+  expReward: integer("exp_reward").notNull().default(0),
+  category: text("category").notNull().default("general"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const userAchievements = pgTable("user_achievements", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  achievementKey: text("achievement_key")
+    .notNull()
+    .references(() => achievements.key, { onDelete: "cascade" }),
+  unlockedAt: timestamp("unlocked_at", { withTimezone: true }).defaultNow().notNull(),
+  idempotencyKey: text("idempotency_key").notNull().unique(),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -334,5 +368,9 @@ export type UserActivity = typeof userActivities.$inferSelect;
 export type NewUserActivity = typeof userActivities.$inferInsert;
 export type UserExpLedger = typeof userExpLedger.$inferSelect;
 export type NewUserExpLedger = typeof userExpLedger.$inferInsert;
+export type Achievement = typeof achievements.$inferSelect;
+export type NewAchievement = typeof achievements.$inferInsert;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type NewUserAchievement = typeof userAchievements.$inferInsert;
 export type PhotoContribution = typeof photoContributions.$inferSelect;
 export type NewPhotoContribution = typeof photoContributions.$inferInsert;

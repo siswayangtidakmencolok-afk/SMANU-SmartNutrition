@@ -226,8 +226,8 @@ export default function HistoryPage() {
 
         {/* Toolbar: search + clear */}
         {count > 0 && (
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none min-w-0">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1010.5 18a7.5 7.5 0 006.15-3.15z" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} />
               </svg>
@@ -236,7 +236,7 @@ export default function HistoryPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Cari pertanyaan…"
-                className="pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 w-48 transition-all"
+                className="pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 w-full sm:w-48 transition-all"
               />
             </div>
 
