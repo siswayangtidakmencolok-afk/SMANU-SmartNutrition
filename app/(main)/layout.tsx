@@ -19,6 +19,7 @@ const BOTTOM_NAV = [
   { href: "/",                   icon: "home",            label: "Beranda" },
   { href: "/ask-smanu",          icon: "smart_toy",       label: "Tanya AI" },
   { href: "/food-challenge",     icon: "restaurant_menu", label: "Challenge" },
+  { href: "/league",             icon: "emoji_events",    label: "League" },
   { href: "/nutrition-knowledge",icon: "menu_book",        label: "Materi" },
   { href: "/my-context",         icon: "manage_accounts", label: "Profil" },
 ];
@@ -74,7 +75,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         {/* ── Mobile bottom navigation bar ──────────────────────────────── */}
         <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 safe-bottom">
-          <div className="grid grid-cols-5 h-16">
+          <div className="grid grid-cols-6 h-16">
             {BOTTOM_NAV.map((item) => {
               const isActive =
                 item.href === "/"

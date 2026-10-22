@@ -1,173 +1,342 @@
-/**
- * /api/user/activity
- *
- * POST — Record a learning activity and award EXP.
- *
- * Idempotent: duplicate idempotency keys are silently ignored (DB unique index).
- * The caller should generate a stable idempotency key from:
- *   - quest:     `${userId}:quest:${questResultId}`
- *   - challenge: `${userId}:challenge:${challengeResultId}`
- *   - scan_save: `${userId}:scan_save:${scanLogId}`
- *
- * REQUEST body:
- * {
- *   activityType:    'quest' | 'challenge' | 'scan_save',
- *   activityLabel:   string,           // human-readable label
- *   idempotencyKey:  string,           // stable key to prevent duplicates
- *   sourceRef?:      string,           // source record id
- *   score?:          number,           // 0–100
- *   domain?:         string,
- * }
- *
- * RESPONSE 200: { activityId: string, expAwarded: number, newTotalExp: number, alreadyRecorded: boolean }
- * RESPONSE 401: not authenticated
- * RESPONSE 400: validation error
- */
-
+import { and, eq, sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { userActivities, userExpLedger } from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
 import {
-  EXP_RULES,
-  type ExpReason,
-} from "@/lib/exp-system";
+  foodScanLogs,
+  userActivities,
+  userExpLedger,
+} from "@/lib/db/schema";
+import {
+  ALL_DOMAINS_LABEL,
+  QUEST_QUESTION_COUNT,
+  QUESTION_BANK,
+} from "@/lib/nutriquest-bank";
+import {
+  FOOD_OPTIONS,
+  SCENARIOS,
+  scoreChallengeSelection,
+} from "@/lib/food-challenge-data";
+import { EXP_RULES, type ExpReason } from "@/lib/exp-system";
+import { checkAchievementsForUser } from "@/lib/achievement-checker";
 
 export const runtime = "nodejs";
 
-interface ActivityBody {
-  activityType:   "quest" | "challenge" | "scan_save";
-  activityLabel:  string;
-  idempotencyKey: string;
-  sourceRef?:     string;
-  score?:         number;
-  domain?:        string;
+type ActivityType = "quest" | "challenge" | "scan_save";
+type ActivityBody = Record<string, unknown> & { activityType?: unknown };
+
+interface VerifiedActivity {
+  activityType: ActivityType;
+  activityLabel: string;
+  sourceRef: string;
+  score: number | null;
+  domain: string | null;
 }
 
-function computeExpAward(type: ActivityBody["activityType"], score?: number): {
-  entries: { delta: number; reason: ExpReason }[];
-  total: number;
-} {
-  const entries: { delta: number; reason: ExpReason }[] = [];
+interface ExpEntry {
+  delta: number;
+  reason: ExpReason;
+}
 
-  if (type === "quest") {
-    entries.push({ delta: EXP_RULES.QUEST_COMPLETE, reason: "quest_complete" });
-    if (score === 100) {
-      entries.push({ delta: EXP_RULES.QUEST_PERFECT, reason: "quest_perfect" });
-    }
-  } else if (type === "challenge") {
-    entries.push({ delta: EXP_RULES.CHALLENGE_COMPLETE, reason: "challenge_complete" });
-    if (typeof score === "number" && score >= 70) {
-      entries.push({ delta: EXP_RULES.CHALLENGE_PASS, reason: "challenge_pass" });
-    }
-  } else if (type === "scan_save") {
-    entries.push({ delta: EXP_RULES.SCAN_SAVE, reason: "scan_save" });
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isAnswerMap(value: unknown): value is Record<string, string> {
+  return isRecord(value) && Object.values(value).every((entry) => typeof entry === "string");
+}
+
+function isUuid(value: unknown): value is string {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function computeExpEntries(activity: VerifiedActivity): ExpEntry[] {
+  if (activity.activityType === "scan_save") {
+    return [{ delta: EXP_RULES.SCAN_SAVE, reason: "scan_save" }];
+  }
+  if (activity.activityType === "quest") {
+    return activity.score === 100
+      ? [
+          { delta: EXP_RULES.QUEST_COMPLETE, reason: "quest_complete" },
+          { delta: EXP_RULES.QUEST_PERFECT, reason: "quest_perfect" },
+        ]
+      : [{ delta: EXP_RULES.QUEST_COMPLETE, reason: "quest_complete" }];
+  }
+  return activity.score !== null && activity.score >= 70
+    ? [
+        { delta: EXP_RULES.CHALLENGE_COMPLETE, reason: "challenge_complete" },
+        { delta: EXP_RULES.CHALLENGE_PASS, reason: "challenge_pass" },
+      ]
+    : [{ delta: EXP_RULES.CHALLENGE_COMPLETE, reason: "challenge_complete" }];
+}
+
+function verifyQuestSubmission(body: ActivityBody): VerifiedActivity | string {
+  if (!isUuid(body.sourceRef)) return "ID percobaan NutriQuest tidak valid.";
+  if (typeof body.domain !== "string") return "Domain NutriQuest tidak valid.";
+  if (!isStringArray(body.questionIds) || !isAnswerMap(body.answers)) {
+    return "Jawaban NutriQuest tidak valid.";
   }
 
-  return { entries, total: entries.reduce((s, e) => s + e.delta, 0) };
+  const validDomain = body.domain === ALL_DOMAINS_LABEL ||
+    QUESTION_BANK.some((question) => question.domain === body.domain);
+  if (!validDomain) return "Domain NutriQuest tidak dikenal.";
+
+  const questionPool = body.domain === ALL_DOMAINS_LABEL
+    ? QUESTION_BANK
+    : QUESTION_BANK.filter((question) => question.domain === body.domain);
+  const expectedCount = Math.min(QUEST_QUESTION_COUNT, questionPool.length);
+  const selectedIds = new Set(body.questionIds);
+  if (
+    body.questionIds.length !== expectedCount ||
+    selectedIds.size !== body.questionIds.length ||
+    Object.keys(body.answers).length !== body.questionIds.length
+  ) {
+    return "Jumlah soal atau jawaban NutriQuest tidak sesuai.";
+  }
+
+  const questionsById = new Map(questionPool.map((question) => [question.id, question]));
+  let correctAnswers = 0;
+  for (const questionId of body.questionIds) {
+    const question = questionsById.get(questionId);
+    const answer = body.answers[questionId];
+    if (!question || !question.options.includes(answer)) {
+      return "Soal atau pilihan jawaban NutriQuest tidak valid.";
+    }
+    if (answer === question.correctAnswer) correctAnswers += 1;
+  }
+
+  const score = Math.round((correctAnswers / expectedCount) * 100);
+  return {
+    activityType: "quest",
+    activityLabel: `NutriQuest · ${body.domain}`,
+    sourceRef: body.sourceRef,
+    score,
+    domain: body.domain,
+  };
+}
+
+function verifyChallengeSubmission(body: ActivityBody): VerifiedActivity | string {
+  if (!isUuid(body.sourceRef)) return "ID percobaan Food Challenge tidak valid.";
+  if (typeof body.scenarioId !== "string" || !isStringArray(body.selectedFoodIds)) {
+    return "Pilihan Food Challenge tidak valid.";
+  }
+
+  const scenario = SCENARIOS.find((entry) => entry.id === body.scenarioId);
+  if (!scenario) return "Skenario Food Challenge tidak dikenal.";
+
+  const selectedIds = new Set(body.selectedFoodIds);
+  if (
+    body.selectedFoodIds.length < 2 ||
+    selectedIds.size !== body.selectedFoodIds.length ||
+    body.selectedFoodIds.some((id) => !FOOD_OPTIONS.some((food) => food.id === id))
+  ) {
+    return "Pilihan makanan Food Challenge tidak valid.";
+  }
+
+  const calculated = scoreChallengeSelection(body.selectedFoodIds, scenario);
+  return {
+    activityType: "challenge",
+    activityLabel: `Food Challenge · ${scenario.title}`,
+    sourceRef: body.sourceRef,
+    score: calculated.score,
+    domain: scenario.relatedDomains[0] ?? null,
+  };
+}
+
+async function verifyScanSubmission(userId: string, sourceRef: unknown): Promise<VerifiedActivity | string> {
+  if (typeof sourceRef !== "string" || !sourceRef.trim()) {
+    return "ID hasil scan diperlukan.";
+  }
+  const [scan] = await db
+    .select({
+      id: foodScanLogs.id,
+      recognizedFoodName: foodScanLogs.recognizedFoodName,
+    })
+    .from(foodScanLogs)
+    .where(and(eq(foodScanLogs.id, sourceRef), eq(foodScanLogs.userId, userId)))
+    .limit(1);
+
+  if (!scan) return "Hasil scan tidak ditemukan untuk akun ini.";
+  return {
+    activityType: "scan_save",
+    activityLabel: `Scan: ${scan.recognizedFoodName}`,
+    sourceRef: scan.id,
+    score: null,
+    domain: null,
+  };
 }
 
 export async function POST(req: NextRequest) {
-  // 1. Auth check
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "Login diperlukan." }, { status: 401 });
   }
   const userId = session.user.id;
 
-  // 2. Parse body
   let body: ActivityBody;
   try {
-    body = await req.json() as ActivityBody;
+    const parsed: unknown = await req.json();
+    if (!isRecord(parsed)) {
+      return Response.json({ error: "Format request tidak valid." }, { status: 400 });
+    }
+    body = parsed;
   } catch {
     return Response.json({ error: "Format request tidak valid." }, { status: 400 });
   }
 
-  const { activityType, activityLabel, idempotencyKey, sourceRef, score, domain } = body;
-
-  if (!["quest", "challenge", "scan_save"].includes(activityType)) {
-    return Response.json({ error: "activityType tidak valid." }, { status: 400 });
-  }
-  if (!activityLabel?.trim()) {
-    return Response.json({ error: "activityLabel diperlukan." }, { status: 400 });
-  }
-  if (!idempotencyKey?.trim()) {
-    return Response.json({ error: "idempotencyKey diperlukan." }, { status: 400 });
-  }
-
-  // 3. Attempt to insert activity (idempotency enforced by DB unique index)
-  let activityId: string;
-  let alreadyRecorded = false;
-
   try {
-    const [inserted] = await db
+    let verifiedActivity: VerifiedActivity | string;
+    if (body.activityType === "scan_save") {
+      verifiedActivity = await verifyScanSubmission(userId, body.sourceRef);
+    } else if (body.activityType === "quest") {
+      verifiedActivity = verifyQuestSubmission(body);
+    } else if (body.activityType === "challenge") {
+      verifiedActivity = verifyChallengeSubmission(body);
+    } else {
+      return Response.json({ error: "activityType tidak valid." }, { status: 400 });
+    }
+
+    if (typeof verifiedActivity === "string") {
+      return Response.json({ error: verifiedActivity }, { status: 400 });
+    }
+
+    const { activityType, activityLabel, sourceRef, score, domain } = verifiedActivity;
+    const activityKey = `${userId}:${activityType}:${sourceRef}`;
+    const values = {
+      userId,
+      activityType,
+      activityLabel,
+      sourceRef,
+      score,
+      domain,
+      idempotencyKey: activityKey,
+      verified: true,
+    };
+
+    const [insertedActivity] = await db
       .insert(userActivities)
-      .values({
-        userId,
-        activityType,
-        activityLabel: activityLabel.trim().slice(0, 200),
-        sourceRef:     sourceRef?.slice(0, 200),
-        score:         typeof score === "number" ? Math.max(0, Math.min(100, score)) : null,
-        domain:        domain?.slice(0, 100),
-        idempotencyKey: idempotencyKey.trim().slice(0, 300),
-      })
+      .values(values)
       .onConflictDoNothing()
       .returning({ id: userActivities.id });
 
-    if (!inserted) {
-      // Already recorded — return current totals without re-awarding EXP
-      alreadyRecorded = true;
-      // Fetch the existing activity id
-      const existing = await db
-        .select({ id: userActivities.id })
+    let activityId = insertedActivity?.id;
+    const alreadyRecorded = !insertedActivity;
+
+    if (!activityId) {
+      const [existing] = await db
+        .select({
+          id: userActivities.id,
+          activityType: userActivities.activityType,
+          sourceRef: userActivities.sourceRef,
+          verified: userActivities.verified,
+          score: userActivities.score,
+          activityLabel: userActivities.activityLabel,
+          domain: userActivities.domain,
+        })
         .from(userActivities)
-        .where(eq(userActivities.idempotencyKey, idempotencyKey))
+        .where(and(
+          eq(userActivities.userId, userId),
+          eq(userActivities.idempotencyKey, activityKey),
+        ))
         .limit(1);
-      activityId = existing[0]?.id ?? "unknown";
-    } else {
-      activityId = inserted.id;
-    }
-  } catch (err) {
-    console.error("[activity] DB insert error:", err instanceof Error ? err.message : err);
-    return Response.json({ error: "Gagal mencatat aktivitas." }, { status: 500 });
-  }
 
-  // 4. Award EXP (skip if already recorded)
-  let expAwarded = 0;
+      if (!existing || existing.activityType !== activityType || existing.sourceRef !== sourceRef) {
+        return Response.json({ error: "Aktivitas dengan kunci yang sama tidak cocok." }, { status: 409 });
+      }
 
-  if (!alreadyRecorded) {
-    const { entries } = computeExpAward(activityType, score);
+      if (existing.verified) {
+        if (
+          existing.score !== score ||
+          existing.activityLabel !== activityLabel ||
+          existing.domain !== domain
+        ) {
+          return Response.json({ error: "Percobaan ini sudah tercatat dengan hasil berbeda." }, { status: 409 });
+        }
+        activityId = existing.id;
+      } else {
+        const [verifiedExisting] = await db
+          .update(userActivities)
+          .set({ activityLabel, score, domain, verified: true })
+          .where(and(
+            eq(userActivities.id, existing.id),
+            eq(userActivities.userId, userId),
+            eq(userActivities.verified, false),
+          ))
+          .returning({ id: userActivities.id });
 
-    for (const entry of entries) {
-      const expKey = `${idempotencyKey}:${entry.reason}`;
-      try {
-        await db
-          .insert(userExpLedger)
-          .values({
-            userId,
-            delta:          entry.delta,
-            reason:         entry.reason,
-            activityRef:    activityId,
-            idempotencyKey: expKey,
-          })
-          .onConflictDoNothing();
+        if (verifiedExisting) {
+          activityId = verifiedExisting.id;
+        } else {
+          const [racedRecord] = await db
+            .select({
+              id: userActivities.id,
+              verified: userActivities.verified,
+              score: userActivities.score,
+              activityLabel: userActivities.activityLabel,
+              domain: userActivities.domain,
+            })
+            .from(userActivities)
+            .where(and(
+              eq(userActivities.userId, userId),
+              eq(userActivities.idempotencyKey, activityKey),
+            ))
+            .limit(1);
 
-        expAwarded += entry.delta;
-      } catch (err) {
-        // Non-fatal: log but don't fail the request
-        console.warn("[activity] EXP insert skipped:", err instanceof Error ? err.message : err);
+          if (
+            !racedRecord?.verified ||
+            racedRecord.score !== score ||
+            racedRecord.activityLabel !== activityLabel ||
+            racedRecord.domain !== domain
+          ) {
+            return Response.json({ error: "Aktivitas sedang diproses. Coba lagi." }, { status: 409 });
+          }
+          activityId = racedRecord.id;
+        }
       }
     }
+
+    if (!activityId) throw new Error("Activity insert did not return an ID.");
+
+    let expAwarded = 0;
+    for (const entry of computeExpEntries(verifiedActivity)) {
+      const [ledgerEntry] = await db
+        .insert(userExpLedger)
+        .values({
+          userId,
+          delta: entry.delta,
+          reason: entry.reason,
+          activityRef: activityId,
+          idempotencyKey: `${activityKey}:verified:${entry.reason}`,
+          verified: true,
+        })
+        .onConflictDoNothing()
+        .returning({ delta: userExpLedger.delta });
+
+      if (ledgerEntry) expAwarded += ledgerEntry.delta;
+    }
+
+    const achievementResult = await checkAchievementsForUser(userId);
+    const expResult = await db
+      .select({ total: sql<number>`COALESCE(SUM(${userExpLedger.delta}), 0)::int` })
+      .from(userExpLedger)
+      .where(and(eq(userExpLedger.userId, userId), eq(userExpLedger.verified, true)));
+    const newTotalExp = expResult[0]?.total ?? 0;
+
+    return Response.json({
+      activityId,
+      expAwarded,
+      achievementExpAwarded: achievementResult.totalExpAwarded,
+      newTotalExp,
+      alreadyRecorded,
+      newAchievements: achievementResult.newAchievements,
+    });
+  } catch (err) {
+    console.error("[activity] Failed to record verified activity:", err instanceof Error ? err.message : err);
+    return Response.json({ error: "Gagal memverifikasi atau mencatat aktivitas." }, { status: 500 });
   }
-
-  // 5. Get new total EXP
-  const expResult = await db
-    .select({ total: sql<number>`COALESCE(SUM(${userExpLedger.delta}), 0)::int` })
-    .from(userExpLedger)
-    .where(eq(userExpLedger.userId, userId));
-
-  const newTotalExp = expResult[0]?.total ?? 0;
-
-  return Response.json({ activityId, expAwarded, newTotalExp, alreadyRecorded });
 }

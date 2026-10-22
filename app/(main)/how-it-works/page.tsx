@@ -99,7 +99,7 @@ export default function HowItWorksPage() {
         <h2 className="text-sm font-semibold text-[--color-on-surface] mb-4">
           Pipeline Overview
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
           {[
             { n: "1", label: "Your Question" },
             { n: "2", label: "Knowledge Retrieval" },

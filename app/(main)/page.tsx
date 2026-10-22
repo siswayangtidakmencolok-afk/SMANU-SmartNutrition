@@ -3,6 +3,7 @@ import { QUEST_QUESTION_COUNT } from "@/lib/nutriquest-bank";
 import { LiveContextWidget } from "@/components/dashboard/LiveContextWidget";
 import { RecentSessionsWidget } from "@/components/dashboard/RecentSessionsWidget";
 import { NutriQuestProgressWidget } from "@/components/dashboard/NutriQuestProgressWidget";
+import { StudentNutritionLeagueWidget } from "@/components/dashboard/StudentNutritionLeagueWidget";
 
 // ── Static data ────────────────────────────────────────────────────────────
 
@@ -192,6 +193,8 @@ export default function DashboardPage() {
         <RecentSessionsWidget />
         <NutriQuestProgressWidget />
       </div>
+
+      <StudentNutritionLeagueWidget />
 
       {/* ══════════════════════════════════════════════════════════════════════
           NEW FEATURES ROW — Food Challenge + Learning Journey

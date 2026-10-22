@@ -284,7 +284,7 @@ export default function MyContextPage() {
           {/* CARD 03: Dietary Preferences */}
           <ContextCard num="03" title="Dietary Preferences" icon="restaurant_menu"
             desc="Choose restrictions or preferences that apply to you.">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               {dietaryOptions.map((opt) => {
                 const sel = preferences.includes(opt.id);
                 return (
