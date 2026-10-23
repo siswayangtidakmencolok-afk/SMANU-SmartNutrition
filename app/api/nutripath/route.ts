@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { isIP } from "node:net";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import OpenAI from "openai";
 import {
@@ -13,10 +14,6 @@ export const runtime = "nodejs";
 // ─────────────────────────────────────────────────────────────
 // Configuration
 // ─────────────────────────────────────────────────────────────
-
-const LANGFLOW_FLOW_ID =
-  process.env.LANGFLOW_FLOW_ID?.trim() ||
-  "1a3246ec-c6c7-44d5-9509-66a623466633";
 
 // Path A — Langflow
 const LANGFLOW_TIMEOUT_MS = 120_000;
@@ -51,7 +48,7 @@ type ProviderResult =
 // Browser → Next.js API → provider → SSE → Browser
 //
 // Provider selection (the first path that answers wins):
-//   A. Langflow  — used when LANGFLOW_SERVER_URL + LANGFLOW_API_KEY are set
+//   A. Langflow  — used when server URL, API key, and Flow ID are set
 //   B. OpenAI    — direct API, works on Vercel with only OPENAI_API_KEY
 //   C. Gemini    — legacy fallback for existing deployments
 //
@@ -114,12 +111,36 @@ export async function POST(req: NextRequest) {
   // or an "unauthorized" request.
   const langflowApiKey = process.env.LANGFLOW_API_KEY?.trim();
   const langflowServerUrl = process.env.LANGFLOW_SERVER_URL?.trim();
+  const langflowFlowId = process.env.LANGFLOW_FLOW_ID?.trim();
   const openaiApiKey = process.env.OPENAI_API_KEY?.trim();
   const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
 
-  const langflowConfigured = Boolean(langflowApiKey && langflowServerUrl);
+  if (langflowApiKey && langflowServerUrl && !langflowFlowId) {
+    return jsonResponse(
+      { error: "LANGFLOW_FLOW_ID belum dikonfigurasi di server." },
+      503
+    );
+  }
 
-  if (!langflowConfigured && !openaiApiKey && !geminiApiKey) {
+  const langflowConfig =
+    langflowApiKey && langflowServerUrl && langflowFlowId
+      ? {
+          apiKey: langflowApiKey,
+          serverUrl: langflowServerUrl,
+          flowId: langflowFlowId,
+        }
+      : null;
+
+  if (langflowConfig) {
+    const configurationError = getLangflowConfigurationError(
+      langflowConfig.serverUrl
+    );
+    if (configurationError) {
+      return jsonResponse({ error: configurationError }, 503);
+    }
+  }
+
+  if (!langflowConfig && !openaiApiKey && !geminiApiKey) {
     console.error(
       "[nutripath] No AI provider configured (need LANGFLOW_SERVER_URL + LANGFLOW_API_KEY, or OPENAI_API_KEY, or GEMINI_API_KEY)"
     );
@@ -133,10 +154,9 @@ export async function POST(req: NextRequest) {
   // 3. Path A — Langflow (primary when fully configured)
   // ─────────────────────────────────────────────────────────
 
-  if (langflowConfigured) {
+  if (langflowConfig) {
     const result = await callLangflow({
-      apiKey: langflowApiKey as string,
-      serverUrl: langflowServerUrl as string,
+      ...langflowConfig,
       ctx,
       sessionId: currentSessionId,
     });
@@ -147,7 +167,7 @@ export async function POST(req: NextRequest) {
         orchestration: "Langflow RAG",
         answer: result.answer,
         chunks: result.chunks,
-        extra: { flowId: LANGFLOW_FLOW_ID, sessionId: currentSessionId },
+        extra: { flowId: langflowFlowId, sessionId: currentSessionId },
       });
     }
 
@@ -212,30 +232,21 @@ export async function POST(req: NextRequest) {
 async function callLangflow(params: {
   apiKey: string;
   serverUrl: string;
+  flowId: string;
   ctx: UserContext;
   sessionId: string;
 }): Promise<ProviderResult> {
-  const { apiKey, serverUrl, ctx, sessionId } = params;
-
-  const langflowUrl = `${serverUrl}/api/v1/run/${LANGFLOW_FLOW_ID}`;
-
-  // Log non-secret diagnostic info only (no API key, no URL with embedded credentials)
-  console.log(
-    "[nutripath] request →",
-    LANGFLOW_FLOW_ID,
-    "| session:",
-    sessionId,
-    "| situation:",
-    ctx.situation
+  const { apiKey, serverUrl, flowId, ctx, sessionId } = params;
+  const langflowUrl = new URL(
+    `api/v1/run/${encodeURIComponent(flowId)}`,
+    `${serverUrl.replace(/\/+$/, "")}/`
   );
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), LANGFLOW_TIMEOUT_MS);
 
-  let langflowResponse: Response;
-
   try {
-    langflowResponse = await fetch(langflowUrl, {
+    const langflowResponse = await fetch(langflowUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -250,10 +261,27 @@ async function callLangflow(params: {
       signal: controller.signal,
       cache: "no-store",
     });
+
+    if (!langflowResponse.ok) {
+      return { ok: false, error: `HTTP ${langflowResponse.status}` };
+    }
+
+    const langflowData: unknown = await langflowResponse.json();
+    const answer = extractLangflowAnswer(langflowData);
+    if (!answer) {
+      return { ok: false, error: "ChatOutput did not contain a readable answer" };
+    }
+
+    return { ok: true, answer, chunks: [] };
   } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
+    if (controller.signal.aborted || (err instanceof Error && err.name === "AbortError")) {
       return { ok: false, error: "timeout" };
     }
+
+    if (err instanceof SyntaxError) {
+      return { ok: false, error: "Invalid JSON response" };
+    }
+
     const cause = err instanceof Error ? err.cause : undefined;
     const causeCode =
       typeof cause === "object" &&
@@ -269,33 +297,81 @@ async function callLangflow(params: {
   } finally {
     clearTimeout(timeout);
   }
+}
 
-  // Log status on server only — never forward the raw Langflow body to the
-  // client (it may contain internal credentials, headers, or token details).
-  if (!langflowResponse.ok) {
-    return { ok: false, error: `HTTP ${langflowResponse.status}` };
-  }
-
-  let langflowData: unknown;
+function getLangflowConfigurationError(serverUrl: string): string | null {
+  let parsedUrl: URL;
   try {
-    langflowData = await langflowResponse.json();
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Invalid JSON response",
-    };
+    parsedUrl = new URL(serverUrl);
+  } catch {
+    return "LANGFLOW_SERVER_URL bukan URL yang valid.";
   }
 
-  const answer = extractLangflowAnswer(langflowData);
-  if (!answer) {
-    return { ok: false, error: "ChatOutput did not contain a readable answer" };
+  if (
+    !["http:", "https:"].includes(parsedUrl.protocol) ||
+    parsedUrl.username ||
+    parsedUrl.password ||
+    parsedUrl.search ||
+    parsedUrl.hash
+  ) {
+    return "LANGFLOW_SERVER_URL harus berupa URL HTTP(S) dasar tanpa kredensial atau query.";
   }
 
-  return { ok: true, answer, chunks: [] };
+  if (
+    process.env.NODE_ENV === "production" &&
+    parsedUrl.protocol !== "https:"
+  ) {
+    return "LANGFLOW_SERVER_URL di production harus menggunakan HTTPS.";
+  }
+
+  if (process.env.NODE_ENV === "production" && isLocalOrPrivateHost(parsedUrl.hostname)) {
+    return "LANGFLOW_SERVER_URL production tidak boleh mengarah ke localhost atau jaringan lokal. Gunakan endpoint Langflow yang dapat dijangkau publik.";
+  }
+
+  return null;
+}
+
+function isLocalOrPrivateHost(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
+
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    !host.includes(".")
+  ) {
+    return true;
+  }
+
+  const ipVersion = isIP(host);
+  if (ipVersion === 4) {
+    const [first, second] = host.split(".").map(Number);
+    return (
+      first === 0 ||
+      first === 10 ||
+      first === 127 ||
+      (first === 169 && second === 254) ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168) ||
+      (first === 100 && second >= 64 && second <= 127)
+    );
+  }
+
+  if (ipVersion === 6) {
+    return (
+      host === "::" ||
+      host === "::1" ||
+      /^f[cd]/.test(host) ||
+      /^fe[89ab]/.test(host) ||
+      /^::ffff:(127\.|10\.|192\.168\.|169\.254\.)/.test(host)
+    );
+  }
+
+  return false;
 }
 
 function getLangflowFailureMessage(error: string): string {
-  if (error === "network:ECONNREFUSED" || error === "network:ENOTFOUND" || error === "network:ETIMEDOUT") {
+  if (error.startsWith("network:")) {
     return "Server Langflow tidak dapat dijangkau. Periksa URL dan pastikan server Langflow aktif.";
   }
   if (error === "timeout") {
@@ -306,6 +382,12 @@ function getLangflowFailureMessage(error: string): string {
   }
   if (error === "HTTP 404") {
     return "Flow Langflow tidak ditemukan. Periksa konfigurasi ID flow di server.";
+  }
+  if (error === "HTTP 429") {
+    return "Batas permintaan Langflow tercapai. Coba lagi beberapa saat.";
+  }
+  if (/^HTTP 5\d\d$/.test(error)) {
+    return "Server Langflow sedang mengalami gangguan. Coba lagi beberapa saat.";
   }
   if (error === "Invalid JSON response" || error === "ChatOutput did not contain a readable answer") {
     return "Langflow mengirim respons yang tidak dapat dibaca. Periksa output flow.";

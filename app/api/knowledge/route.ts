@@ -12,8 +12,7 @@ export const runtime = "nodejs";
 // Body: { topicId: string, section: string }
 // ─────────────────────────────────────────────────────────────
 
-const LANGFLOW_FLOW_ID =
-  process.env.LANGFLOW_FLOW_ID || "1a3246ec-c6c7-44d5-9509-66a623466633";
+const LANGFLOW_FLOW_ID = process.env.LANGFLOW_FLOW_ID?.trim();
 
 // Map topic IDs to Langflow-friendly query strings
 const TOPIC_QUERIES: Record<string, Record<string, string>> = {
@@ -123,7 +122,7 @@ export async function POST(req: NextRequest) {
     const queryMap = TOPIC_QUERIES[topicId];
     const query = queryMap?.[section];
 
-    if (apiKey && serverUrl && query) {
+    if (apiKey && serverUrl && LANGFLOW_FLOW_ID && query) {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30_000);

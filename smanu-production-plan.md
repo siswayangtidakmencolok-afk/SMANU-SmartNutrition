@@ -164,22 +164,22 @@ The current `/api/nutripath` route only calls Langflow. When Langflow is unavail
 This sub-task adds a **direct OpenAI path** that activates automatically when
 Langflow is unavailable or not configured. The selection logic:
 
-  1. If `LANGFLOW_SERVER_URL` and `LANGFLOW_API_KEY` are set → try Langflow first
-  2. If Langflow fails or env vars not set → fall back to OpenAI direct API
-  3. If neither is configured → return a clear configuration error
+  1. If `LANGFLOW_SERVER_URL`, `LANGFLOW_API_KEY`, and `LANGFLOW_FLOW_ID` are set → try Langflow first
+  2. If Langflow is not configured → use OpenAI direct API, then legacy Gemini
+  3. If configured Langflow fails → return an explicit error; do not silently switch providers
 
 The OpenAI path uses the same input format (situation, foods, budget, question),
 the same RAG knowledge base retrieval (TF-IDF from `lib/rag-retrieval.ts`), the
 same system prompt structure (from `lib/rag-retrieval.ts:buildSystemPrompt`), and
 the same SSE output format so the frontend requires zero changes.
 
-The result: chat works on Vercel immediately using `OPENAI_API_KEY`. When Langflow
-Cloud is ready, adding `LANGFLOW_SERVER_URL` and `LANGFLOW_API_KEY` to Vercel env
-vars will automatically switch to Langflow.
+The result: chat can work on Vercel using `OPENAI_API_KEY` when Langflow is not
+configured. When Langflow Cloud is ready, adding its base URL, API key, and
+deployed Flow ID to Vercel env vars switches the primary path to Langflow.
 
 ### Expected Outcomes
 - Chat works on Vercel with only `OPENAI_API_KEY` set
-- Setting `LANGFLOW_SERVER_URL` + `LANGFLOW_API_KEY` makes it use Langflow instead
+- Setting `LANGFLOW_SERVER_URL` + `LANGFLOW_API_KEY` + `LANGFLOW_FLOW_ID` makes it use Langflow instead
 - API key (`OPENAI_API_KEY` and `LANGFLOW_API_KEY`) stays server-side only
 - SSE response format is identical to what the frontend already parses
 - Error messages are user-friendly, no credentials leaked
@@ -200,7 +200,8 @@ vars will automatically switch to Langflow.
    - Model: `gpt-4o-mini` (affordable, fast, appropriate for educational content)
    - Temperature: 0.3 (factual/educational, low creativity)
 5. Refactor `POST` handler to:
-   a. Try Langflow if both `LANGFLOW_SERVER_URL` and `LANGFLOW_API_KEY` are set
+   a. Try Langflow if `LANGFLOW_SERVER_URL`, `LANGFLOW_API_KEY`, and
+      `LANGFLOW_FLOW_ID` are set
    b. On Langflow error OR if env vars not present, call `callOpenAI()` instead
    c. Wrap OpenAI answer in the same SSE format (meta → token → done)
    d. If both fail, return a single clear error
@@ -220,9 +221,9 @@ vars will automatically switch to Langflow.
 | Variable | Required for | Notes |
 |---|---|---|
 | `OPENAI_API_KEY` | OpenAI path (new) | Server-side only |
-| `LANGFLOW_SERVER_URL` | Langflow path (existing) | Optional; if set, Langflow tried first |
-| `LANGFLOW_API_KEY` | Langflow path (existing) | Optional; must pair with SERVER_URL |
-| `LANGFLOW_FLOW_ID` | Langflow path (existing) | Optional; has hardcoded default |
+| `LANGFLOW_SERVER_URL` | Langflow path (existing) | Optional; base URL of a reachable deployment |
+| `LANGFLOW_API_KEY` | Langflow path (existing) | Optional; required with SERVER_URL and FLOW_ID |
+| `LANGFLOW_FLOW_ID` | Langflow path (existing) | Required with SERVER_URL and API_KEY; no code default |
 
 ---
 
@@ -244,7 +245,7 @@ explain the dual-path selection logic so the next developer understands the setu
 1. Read current `nutripath/.env.local.example`
 2. Rewrite to document: `OPENAI_API_KEY` (required for fallback path),
    `LANGFLOW_SERVER_URL` (optional, activates Langflow), `LANGFLOW_API_KEY` (optional),
-   `LANGFLOW_FLOW_ID` (optional, has default)
+   `LANGFLOW_FLOW_ID` (required when Langflow is activated)
 3. Add a comment block explaining the AI path selection logic
 
 ### Relevant Context
@@ -262,7 +263,7 @@ After all sub-tasks are implemented, the only env var needed for Vercel to work:
 | `OPENAI_API_KEY` | **Yes** | OpenAI dashboard → API keys |
 | `LANGFLOW_SERVER_URL` | No (optional) | Langflow Cloud base URL |
 | `LANGFLOW_API_KEY` | No (optional) | Langflow Cloud API key |
-| `LANGFLOW_FLOW_ID` | No (optional) | Flow ID from Langflow Cloud URL |
+| `LANGFLOW_FLOW_ID` | No (required for Langflow) | Exact deployed Flow ID |
 
 Chat works on Vercel immediately once `OPENAI_API_KEY` is set.
-When Langflow Cloud is ready, adding the three Langflow vars switches the primary path.
+When Langflow Cloud is ready, adding all three Langflow vars switches the primary path.
