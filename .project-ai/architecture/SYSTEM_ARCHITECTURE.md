@@ -34,3 +34,9 @@ flowchart LR
 ## Yang belum dapat dipastikan
 
 Aktivasi provider, status flow Langflow Cloud, deployment Vercel, data aktual production, dan konfigurasi runtime tidak dibuktikan oleh file konfigurasi saja. Lihat [INTEGRATIONS.md](INTEGRATIONS.md) dan [PROJECT_STATUS.md](../PROJECT_STATUS.md).
+
+## Jalur scale dan kontrol lintas komponen
+
+Untuk pertumbuhan, pertahankan Next.js sebagai boundary untuk autentikasi, validasi, ownership, kuota, dan routing provider; model/flow tidak menjadi pemilik identitas atau business rules. Gunakan Neon melalui query yang terukur, user-scoped dan bounded. Tambahkan cache, queue, vector store, atau service terpisah hanya bila workload dan benchmark membuktikannya.
+
+Belum ada bukti load-test hingga ribuan pengguna, target p95/error/cost, shared API rate limit, backup restore drill, atau provider budget monitoring. Dengan demikian skalabilitas target tetap UNKNOWN; deployment serverless dan database terkelola saja tidak membuktikan kapasitas. Temuan source review security ada di [SECURITY.md](../engineering/SECURITY.md), dan langkah validasinya ada di [ROADMAP.md](../project-management/ROADMAP.md).

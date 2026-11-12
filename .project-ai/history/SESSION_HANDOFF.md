@@ -26,6 +26,8 @@ SMANU-007 — Menerapkan Interactive Navigation Hub pada dashboard (COMPLETED).
 
 ## Work Completed
 
+- Visual lanjutan: hub pusat mendapat orbit hijau/daun SVG; halaman Ask SMANU memakai bot inline SVG dengan ekspresi idle/attentive/thinking/happy/concerned, tatapan ke input/pointer, dan blink/nod/tilt/gerak daun terjadwal tidak bersamaan.
+- Perubahan visual tidak mengubah payload/request `/api/nutripath`, parser SSE, floating `AiChatWidget`, Auth.js, scanner, ataupun League.
 - Refinement terbaru menyusun ulang hub menjadi radial 3×3 pada desktop dan diagram perimeter dua kolom pada mobile, dengan hub tengah berbentuk lingkaran dan konektor di kedua layout.
 - CSS mobile mengompakkan isi hub agar tetap muat di lingkaran; perbaikan mempertahankan delapan fitur, data, rute, preview, dan handler klik dua langkah yang sudah ada.
 - Mengimplementasikan `DashboardNavigationHub` pada bagian atas dashboard dengan interaksi dua langkah, preview, CTA, radial desktop, dan layout grid mobile.
@@ -41,6 +43,7 @@ SMANU-007 — Menerapkan Interactive Navigation Hub pada dashboard (COMPLETED).
 
 - `app/(main)/page.tsx` — mengganti header/hero atas dengan Dashboard Navigation Hub; mempertahankan data `featureCards` dan semua section sesudahnya.
 - `components/dashboard/DashboardNavigationHub.tsx` — komponen navigasi interaktif baru dengan rute yang sudah ada.
+- `components/chat/SmanuBotMascot.tsx` — ilustrasi bot SVG dan state animasi mikro khusus Ask SMANU.
 - `app/globals.css` — layout radial/mobile, animasi, konektor, dan reduced-motion dashboard hub.
 - `.project-ai/architecture/FRONTEND_ARCHITECTURE.md`, `.project-ai/modules/SHARED_COMPONENTS.md`, `.project-ai/phases/PHASE_05_USER_EXPERIENCE.md`, `.project-ai/project-management/TASKS.md`, `.project-ai/history/CHANGELOG.md`, `.project-ai/history/SESSION_HANDOFF.md` — dokumentasi dashboard serta hasil verifikasi.
 - Root `AGENTS.md` (ditambahkan instruksi baca dokumentasi; instruksi Next.js yang ada dipertahankan).
@@ -53,6 +56,7 @@ SMANU-007 — Menerapkan Interactive Navigation Hub pada dashboard (COMPLETED).
 - `npm run lint -- 'app\\(main)\\page.tsx' 'components\\dashboard\\DashboardNavigationHub.tsx'` — lulus.
 - `npx tsc --noEmit` — lulus.
 - `npm run build` — lulus; Next.js 16.3.8 compile, TypeScript, dan route generation selesai.
+- Untuk animasi bot dan dekorasi orbit: TypeScript lulus, production build lulus, `git diff --check` lulus. ESLint untuk komponen bot dan hub lulus; ESLint juga pada halaman Ask SMANU mendapati rule `react-hooks/set-state-in-effect` pada efek pengisian query lama (baris 126 sebelum perubahan), tidak terkait UI baru dan tidak diubah.
 - Browser viewport 360×900, 375×900, 390×900, dan 412×900: 8 widget di sekitar hub lingkaran, tanpa horizontal overflow/tumpang tindih, teks judul/deskripsi tidak overflow.
 - Browser viewport 1280×900: radial 3×3 aktif, hub bulat dan terpusat di workspace, tanpa horizontal overflow.
 - Interaksi browser: klik pertama tetap di dashboard dan menampilkan preview; klik kedua membuka `/ask-smanu`; Tutup dan ganti widget bekerja; CTA AI Food Scanner menuju `/nutrition-knowledge`.
@@ -96,3 +100,11 @@ Pemilik Vercel perlu memastikan Langflow base URL resmi HTTPS pada `LANGFLOW_SER
 ## Instructions for Next Agent
 
 Baca root `AGENTS.md`, `.project-ai/README.md`, `.project-ai/AGENT.md`, `PROJECT_CONTEXT.md`, `PROJECT_STATUS.md`, `project-management/NEXT_TASK.md`, dan dokumen modul relevan. Periksa Git status sebelum mengubah file; perubahan pengguna yang dirty/untracked harus dipertahankan.
+
+## Architecture, AI, and Security Documentation Audit — 2026-11-12
+
+- Source review documented actual Langflow/OpenAI/Gemini routes and local token/category retrieval; no MCP/Mastra, vector dependency/index, load benchmark, test runner, or `.github/workflows` was found in the inspected repository.
+- Added source-based security follow-ups for provider/API quotas and request bounds, `photo-contribute` scan ownership, scanner snapshot provenance, auth secret consistency, DB least-privilege/backup verification, and test/CI gaps. See `engineering/SECURITY.md`.
+- Updated AI roadmap to keep the current Next.js policy boundary and Langflow integration while treating Mastra/MCP as optional/unintegrated. Added phased work to existing roadmap/task list; `NEXT_TASK.md` remains SMANU-002 BLOCKED per existing owner-selected task.
+- Updated existing docs only; did not alter application source, `.env.local`, DB/migrations, deployment, or untracked/user changes.
+- Documentation validation: `git diff --check` and local-link verification. No source build was run. No penetration test, dependency audit, load test, or fresh Vercel/Neon/provider runtime test was performed.

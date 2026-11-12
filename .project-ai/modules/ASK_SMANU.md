@@ -14,6 +14,8 @@ Halaman client `app/(main)/ask-smanu/page.tsx` mengirim `situation`, `availableF
 ## 3. Directory and Files
 
 - `app/(main)/ask-smanu/page.tsx` — UI, status loading/streaming/done/error dan parsing.
+- `components/chat/SmanuBotIntro.tsx` — intro bot yang memulai lintasan setelah mount, lalu menahan posisi akhir dengan orientasi tegak; reduced-motion memakai lintasan singkat dan menampilkan salam tanpa efek pendorong.
+- `components/chat/SmanuBotMascot.tsx` — ilustrasi bot inline SVG; mood mengikuti input/status, sedangkan blink, nod, tilt, dan gerak daun dijadwalkan bergantian secara acak. Gerak dihentikan untuk reduced-motion.
 - `app/api/nutripath/route.ts` — pemilihan provider, Langflow/OpenAI/Gemini, error dan SSE.
 - `lib/rag-retrieval.ts`, `lib/knowledge-base.ts` — retrieval lokal dan prompt jalur langsung.
 - `context/HistoryContext.tsx`, `lib/history-store.ts` — histori browser.
@@ -60,6 +62,7 @@ Perbarui `LANGFLOW_SERVER_URL` di Vercel Production ke URL HTTPS yang benar, lal
 ## 13. Testing
 
 Production API request diuji dan gagal pada validasi URL (HTTP 503); bukan kegagalan jaringan upstream. SSE jawaban nyata, flow ID, Langflow accessibility dari Vercel, dan Gemini fallback belum diuji.
+Perubahan visual maskot tidak mengubah request/API/SSE. Validasi code visual dan status build dicatat pada [SESSION_HANDOFF.md](../history/SESSION_HANDOFF.md).
 
 ## 14. Related Tasks
 

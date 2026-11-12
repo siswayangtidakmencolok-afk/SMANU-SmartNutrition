@@ -18,9 +18,9 @@ Folder ini adalah konteks teknis yang dapat diperbarui untuk AI coding agent dan
 
 ## Indeks
 
-- [Arsitektur](architecture/SYSTEM_ARCHITECTURE.md)
+- [Arsitektur](architecture/SYSTEM_ARCHITECTURE.md) · [AI](architecture/AI_ARCHITECTURE.md) · [API](architecture/API_ARCHITECTURE.md)
 - [Modul](modules/ASK_SMANU.md) · [Autentikasi](modules/AUTHENTICATION.md) · [Food Scanner](modules/FOOD_SCANNER.md) · [League](modules/STUDENT_NUTRITION_LEAGUE.md)
-- [Database](database/DATABASE_SCHEMA.md) · [Environment](engineering/ENVIRONMENT_VARIABLES.md) · [Deployment](engineering/DEPLOYMENT.md)
+- [Database/schema](database/DATABASE_SCHEMA.md) · [Keamanan](engineering/SECURITY.md) · [Environment](engineering/ENVIRONMENT_VARIABLES.md) · [Deployment](engineering/DEPLOYMENT.md)
 - [Roadmap](project-management/ROADMAP.md) · [Task berikutnya](project-management/NEXT_TASK.md) · [Riwayat sesi](history/SESSION_HANDOFF.md)
 
 ## Struktur
@@ -30,9 +30,9 @@ Dokumen dibagi menjadi arsitektur, modul, database, engineering, manajemen proye
 ## Daftar dokumen
 
 - **Root:** [README](README.md), [AGENT](AGENT.md), [PROMPT](PROMPT.md), [PROJECT_CONTEXT](PROJECT_CONTEXT.md), [PROJECT_STATUS](PROJECT_STATUS.md).
-- **Arsitektur:** [SYSTEM_ARCHITECTURE](architecture/SYSTEM_ARCHITECTURE.md), [FOLDER_STRUCTURE](architecture/FOLDER_STRUCTURE.md), [FRONTEND_ARCHITECTURE](architecture/FRONTEND_ARCHITECTURE.md), [BACKEND_ARCHITECTURE](architecture/BACKEND_ARCHITECTURE.md), [API_ARCHITECTURE](architecture/API_ARCHITECTURE.md), [DATABASE_ARCHITECTURE](architecture/DATABASE_ARCHITECTURE.md), [AI_ARCHITECTURE](architecture/AI_ARCHITECTURE.md), [DATA_FLOW](architecture/DATA_FLOW.md), [INTEGRATIONS](architecture/INTEGRATIONS.md).
+- **Arsitektur:** [SYSTEM_ARCHITECTURE](architecture/SYSTEM_ARCHITECTURE.md), [FOLDER_STRUCTURE](architecture/FOLDER_STRUCTURE.md), [FRONTEND_ARCHITECTURE](architecture/FRONTEND_ARCHITECTURE.md), [BACKEND_ARCHITECTURE](architecture/BACKEND_ARCHITECTURE.md), [API_ARCHITECTURE](architecture/API_ARCHITECTURE.md), [AI_ARCHITECTURE](architecture/AI_ARCHITECTURE.md), [DATA_FLOW](architecture/DATA_FLOW.md), [INTEGRATIONS](architecture/INTEGRATIONS.md).
 - **Modul:** [AUTHENTICATION](modules/AUTHENTICATION.md), [ASK_SMANU](modules/ASK_SMANU.md), [LANGFLOW_RAG](modules/LANGFLOW_RAG.md), [NUTRITION_KNOWLEDGE](modules/NUTRITION_KNOWLEDGE.md), [FOOD_SCANNER](modules/FOOD_SCANNER.md), [STUDENT_NUTRITION_LEAGUE](modules/STUDENT_NUTRITION_LEAGUE.md), [USER_PROFILE](modules/USER_PROFILE.md), [SHARED_COMPONENTS](modules/SHARED_COMPONENTS.md).
-- **Database:** [DATABASE_SCHEMA](database/DATABASE_SCHEMA.md), [TABLES_AND_RELATIONS](database/TABLES_AND_RELATIONS.md), [MIGRATIONS](database/MIGRATIONS.md), [DATA_DICTIONARY](database/DATA_DICTIONARY.md).
+- **Database:** [DATABASE_SCHEMA](database/DATABASE_SCHEMA.md) (mencakup arsitektur akses dan batas verifikasi database), [TABLES_AND_RELATIONS](database/TABLES_AND_RELATIONS.md), [MIGRATIONS](database/MIGRATIONS.md), [DATA_DICTIONARY](database/DATA_DICTIONARY.md).
 - **Engineering:** [TECH_STACK](engineering/TECH_STACK.md), [CODING_STANDARDS](engineering/CODING_STANDARDS.md), [SECURITY](engineering/SECURITY.md), [TESTING](engineering/TESTING.md), [ERROR_HANDLING](engineering/ERROR_HANDLING.md), [DEPLOYMENT](engineering/DEPLOYMENT.md), [ENVIRONMENT_VARIABLES](engineering/ENVIRONMENT_VARIABLES.md).
 - **Manajemen proyek:** [ROADMAP](project-management/ROADMAP.md), [PHASES](project-management/PHASES.md), [TASKS](project-management/TASKS.md), [NEXT_TASK](project-management/NEXT_TASK.md), [TASK_TEMPLATE](project-management/TASK_TEMPLATE.md), [PRIORITIES](project-management/PRIORITIES.md), [ACCEPTANCE_CRITERIA](project-management/ACCEPTANCE_CRITERIA.md).
 - **Riwayat:** [CHANGELOG](history/CHANGELOG.md), [COMMIT_HISTORY](history/COMMIT_HISTORY.md), [TECHNICAL_DECISIONS](history/TECHNICAL_DECISIONS.md), [BUG_HISTORY](history/BUG_HISTORY.md), [SESSION_HANDOFF](history/SESSION_HANDOFF.md).
@@ -49,6 +49,8 @@ Dokumen dibagi menjadi arsitektur, modul, database, engineering, manajemen proye
 ## Status proyek terakhir
 
 Source aplikasi berada di root repository dan memakai Next.js App Router. Audit ini memeriksa konfigurasi, halaman, route API, skema Drizzle, migration, integrasi AI, serta git log. Route dan provider dapat diidentifikasi dari kode, tetapi koneksi Langflow/AI dan deployment Vercel tidak diuji ulang dalam pekerjaan dokumentasi ini. Lihat [PROJECT_STATUS.md](PROJECT_STATUS.md) untuk batasan per modul.
+
+Audit dokumentasi/security 2026-11-12 adalah source review saja: tidak ada penetration test, dependency scan, load test, atau verifikasi environment Vercel/Neon baru. Temuan dan tindak lanjut ada di [SECURITY.md](engineering/SECURITY.md), [AI_ARCHITECTURE.md](architecture/AI_ARCHITECTURE.md), [ROADMAP.md](project-management/ROADMAP.md), dan [TASKS.md](project-management/TASKS.md). MCP/Mastra dan vector DB belum terintegrasi.
 
 ## Catatan sumber lama
 

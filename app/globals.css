@@ -196,6 +196,488 @@
   }
 }
 
+@keyframes smanu-hub-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes smanu-hub-leaf-drift {
+  0%, 100% {
+    opacity: 0.62;
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    opacity: 0.95;
+    transform: translateY(-4px) rotate(6deg);
+  }
+}
+
+@keyframes smanu-bot-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes smanu-bot-blink {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  45%, 60% {
+    transform: scaleY(0.08);
+  }
+}
+
+@keyframes smanu-bot-nod {
+  0%, 100% {
+    transform: rotate(0);
+  }
+  35% {
+    transform: rotate(3deg) translateY(1px);
+  }
+  70% {
+    transform: rotate(-1deg);
+  }
+}
+
+@keyframes smanu-bot-tilt {
+  0%, 100% {
+    transform: rotate(0);
+  }
+  35%, 70% {
+    transform: rotate(-3deg);
+  }
+}
+
+@keyframes smanu-bot-leaves {
+  0%, 100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(4deg) translateY(-1px);
+  }
+}
+
+@keyframes smanu-bot-flight {
+  0% {
+    offset-distance: 0%;
+    offset-rotate: auto 0deg;
+    opacity: 0;
+    transform: scale(0.74);
+  }
+  10% {
+    opacity: 1;
+  }
+  68% {
+    offset-distance: 78%;
+    offset-rotate: auto -105deg;
+    transform: scale(1.04);
+  }
+  88% {
+    offset-distance: 96%;
+    offset-rotate: auto -128deg;
+    transform: scale(0.98);
+  }
+  100% {
+    offset-distance: 100%;
+    offset-rotate: auto -136deg;
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes smanu-bot-flight-fallback {
+  0% {
+    opacity: 0;
+    transform: translate(-55px, 42px) rotate(-14deg) scale(0.74);
+  }
+  10% {
+    opacity: 1;
+  }
+  70% {
+    transform: translate(22px, -34px) rotate(8deg) scale(1.04);
+  }
+  88% {
+    transform: translate(4px, -4px) rotate(-3deg) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0) scale(1);
+  }
+}
+
+@keyframes smanu-bot-flight-reduced {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes smanu-bot-copy-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes smanu-bot-intro-glow {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(0.86);
+  }
+  45% {
+    opacity: 0.75;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes smanu-bot-trail-draw {
+  0% {
+    stroke-dashoffset: 280;
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.82;
+  }
+  78% {
+    stroke-dashoffset: 60;
+    opacity: 0.68;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.18;
+  }
+}
+
+@keyframes smanu-bot-wind-draw {
+  0%, 100% {
+    stroke-dashoffset: 56;
+    opacity: 0;
+  }
+  25%, 74% {
+    stroke-dashoffset: 0;
+    opacity: 0.72;
+  }
+}
+
+@keyframes smanu-bot-pressure {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  20% {
+    opacity: 0.72;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.5);
+  }
+}
+
+@keyframes smanu-bot-energy-spark {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.4) translate(0, 5px);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1) translate(0, -3px);
+  }
+  75% {
+    opacity: 0.7;
+    transform: scale(0.8) translate(5px, -10px);
+  }
+}
+
+@keyframes smanu-bot-leaf-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(-20deg) scale(0.7);
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(24px, 70px, 0) rotate(210deg) scale(0.85);
+  }
+}
+
+.dashboard-hub-vortex {
+  overflow: visible;
+  opacity: 0.42;
+}
+
+.dashboard-hub-vortex-orbit {
+  fill: none;
+  stroke: #34d399;
+  stroke-width: 2;
+  stroke-dasharray: 58 110;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.dashboard-hub-vortex-orbit--one {
+  opacity: 0.72;
+  animation: smanu-hub-orbit 34s linear infinite;
+}
+
+.dashboard-hub-vortex-orbit--two {
+  opacity: 0.45;
+  stroke: #a7f3d0;
+  stroke-dasharray: 40 125;
+  animation: smanu-hub-orbit 46s linear infinite reverse;
+}
+
+.dashboard-hub-vortex-leaves {
+  fill: #4ade80;
+  opacity: 0.62;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: smanu-hub-leaf-drift 5.8s ease-in-out infinite;
+}
+
+.dashboard-hub-vortex-sparks {
+  fill: #d1fae5;
+  filter: drop-shadow(0 0 4px #6ee7b7);
+  animation: smanu-hub-glow 3.8s ease-in-out infinite;
+}
+
+.dashboard-hub-core > :not(.dashboard-hub-vortex) {
+  position: relative;
+  z-index: 1;
+}
+
+.smanu-bot-mascot {
+  display: block;
+  overflow: visible;
+}
+
+.smanu-bot-float {
+  transform-origin: center;
+  animation: smanu-bot-float 6.8s ease-in-out infinite;
+}
+
+.smanu-bot-mascot[data-animated="false"] .smanu-bot-float {
+  animation: none;
+}
+
+.smanu-bot-head,
+.smanu-bot-eyes,
+.smanu-bot-crown {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.smanu-bot-pupil {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 320ms ease-out;
+}
+
+.smanu-bot-mascot[data-look="left"] .smanu-bot-pupil {
+  transform: translateX(-1.5px);
+}
+
+.smanu-bot-mascot[data-look="right"] .smanu-bot-pupil {
+  transform: translateX(1.5px);
+}
+
+.smanu-bot-mascot[data-look="input"] .smanu-bot-pupil {
+  transform: translateY(1.5px);
+}
+
+.smanu-bot-mascot[data-motion="blink"] .smanu-bot-eyes {
+  animation: smanu-bot-blink 240ms ease-in-out;
+}
+
+.smanu-bot-mascot[data-motion="nod"] .smanu-bot-head {
+  animation: smanu-bot-nod 850ms ease-in-out;
+}
+
+.smanu-bot-mascot[data-motion="tilt"] .smanu-bot-head {
+  animation: smanu-bot-tilt 900ms ease-in-out;
+}
+
+.smanu-bot-mascot[data-motion="leaves"] .smanu-bot-crown {
+  animation: smanu-bot-leaves 1.5s ease-in-out;
+}
+
+.smanu-bot-mascot[data-mood="thinking"] .smanu-bot-float {
+  animation-duration: 4.8s;
+}
+
+.smanu-bot-intro-glow {
+  animation: none;
+}
+
+.smanu-bot-intro--launching .smanu-bot-intro-glow {
+  animation: smanu-bot-intro-glow 2.1s ease-in-out infinite;
+}
+
+.smanu-bot-flight-guide {
+  fill: none;
+  stroke: #10b981;
+  stroke-width: 2;
+  stroke-dasharray: 2 7;
+  stroke-linecap: round;
+  opacity: 0.42;
+}
+
+.smanu-bot-flight-trail {
+  fill: none;
+  stroke: #34d399;
+  stroke-width: 5;
+  stroke-dasharray: 280;
+  stroke-dashoffset: 280;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 5px rgb(16 185 129 / 52%));
+  animation: none;
+}
+
+.smanu-bot-intro--launching .smanu-bot-flight-trail {
+  animation: smanu-bot-trail-draw 3.2s cubic-bezier(0.2, 0.72, 0.22, 1) both;
+}
+
+.smanu-bot-wind-streak {
+  fill: none;
+  stroke: #6ee7b7;
+  stroke-width: 2;
+  stroke-dasharray: 56;
+  stroke-dashoffset: 56;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgb(16 185 129 / 58%));
+  animation: none;
+}
+
+.smanu-bot-intro--launching .smanu-bot-wind-streak {
+  animation: smanu-bot-wind-draw 1.8s ease-out 0.12s 2 both;
+}
+
+.smanu-bot-pressure-ring {
+  fill: none;
+  stroke: #6ee7b7;
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+}
+
+.smanu-bot-pressure-ring--one {
+  animation: none;
+}
+
+.smanu-bot-pressure-ring--two {
+  animation: none;
+}
+
+.smanu-bot-intro--launching .smanu-bot-pressure-ring--one {
+  animation: smanu-bot-pressure 1.15s ease-out 0.08s both;
+}
+
+.smanu-bot-intro--launching .smanu-bot-pressure-ring--two {
+  animation: smanu-bot-pressure 1.15s ease-out 0.58s both;
+}
+
+.smanu-bot-energy {
+  fill: #a7f3d0;
+  filter: drop-shadow(0 0 4px #34d399);
+}
+
+.smanu-bot-energy circle {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: none;
+}
+
+.smanu-bot-intro--launching .smanu-bot-energy circle {
+  animation: smanu-bot-energy-spark 1.25s ease-out 0.08s 2 both;
+}
+
+.smanu-bot-intro--launching .smanu-bot-energy circle:nth-child(2) { animation-delay: 0.34s; }
+.smanu-bot-intro--launching .smanu-bot-energy circle:nth-child(3) { animation-delay: 0.58s; }
+.smanu-bot-intro--launching .smanu-bot-energy circle:nth-child(4) { animation-delay: 0.78s; }
+
+.smanu-bot-falling-leaf {
+  position: absolute;
+  z-index: 2;
+  width: 15px;
+  height: 15px;
+  opacity: 0;
+  pointer-events: none;
+  animation: none;
+}
+
+.smanu-bot-intro--launching .smanu-bot-falling-leaf {
+  animation: smanu-bot-leaf-fall 2.5s ease-in 1.15s both;
+}
+
+.smanu-bot-falling-leaf--one { left: 44px; top: 54px; }
+.smanu-bot-falling-leaf--two { left: 88px; top: 44px; animation-delay: 1.55s; }
+.smanu-bot-falling-leaf--three { left: 122px; top: 68px; animation-delay: 1.85s; }
+
+.smanu-bot-flight {
+  z-index: 3;
+  offset-path: path("M 5 127 C 10 31 164 8 100 68");
+  offset-anchor: center;
+  offset-rotate: auto 0deg;
+  offset-distance: 0%;
+  opacity: 0;
+  animation: none;
+}
+
+.smanu-bot-intro--launching .smanu-bot-flight {
+  animation: smanu-bot-flight 3.2s cubic-bezier(0.2, 0.72, 0.22, 1) both;
+}
+
+.smanu-bot-intro--arrived .smanu-bot-flight {
+  opacity: 1;
+}
+
+@supports (offset-path: path("M 0 0 L 1 1")) {
+  .smanu-bot-intro--arrived .smanu-bot-flight {
+    animation: none;
+    offset-distance: 100%;
+    offset-rotate: 0deg;
+    transform: scale(1);
+  }
+}
+
+.smanu-bot-flight--arrived .smanu-bot-eyes {
+  animation: smanu-bot-blink 300ms ease-in-out 1;
+}
+
+.smanu-bot-intro-copy {
+  opacity: 0;
+  animation: none;
+}
+
+.smanu-bot-intro--launching .smanu-bot-intro-copy {
+  animation: smanu-bot-copy-arrive 600ms ease-out 2.45s both;
+}
+
+@supports not (offset-path: path("M 0 0 L 1 1")) {
+  .smanu-bot-intro--launching .smanu-bot-flight {
+    animation-name: smanu-bot-flight-fallback;
+  }
+}
+
 .dashboard-hub-entrance {
   animation: smanu-hub-reveal 600ms ease-out backwards;
 }
@@ -358,15 +840,45 @@
   .dashboard-hub-entrance,
   .dashboard-hub-feature,
   .dashboard-hub-preview,
-  .dashboard-hub-connector {
+  .dashboard-hub-connector,
+  .dashboard-hub-vortex-orbit,
+  .dashboard-hub-vortex-leaves,
+  .dashboard-hub-vortex-sparks,
+  .smanu-bot-float,
+  .smanu-bot-eyes,
+  .smanu-bot-head,
+  .smanu-bot-crown {
     animation: none;
   }
 
   .dashboard-hub-feature,
-  .dashboard-hub-preview {
+  .dashboard-hub-preview,
+  .smanu-bot-pupil {
     transition-duration: 0.01ms !important;
   }
+
+  .smanu-bot-intro-glow,
+  .smanu-bot-flight-trail,
+  .smanu-bot-wind-streak,
+  .smanu-bot-pressure-ring,
+  .smanu-bot-energy circle,
+  .smanu-bot-falling-leaf {
+    animation: none;
+  }
+
+  .smanu-bot-intro--launching .smanu-bot-flight {
+    offset-path: path("M 42 101 Q 66 64 100 68");
+    offset-rotate: 0deg;
+    animation: smanu-bot-flight-reduced 1.1s ease-out both;
+  }
+
+  .smanu-bot-intro--launching .smanu-bot-intro-copy {
+    opacity: 1;
+    animation: none;
+    transform: none;
+  }
 }
+
 
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar,

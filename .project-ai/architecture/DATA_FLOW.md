@@ -85,7 +85,7 @@ sequenceDiagram
   end
 ```
 
-Recognition is not proof of ingredients/weight. Scan image is documented in route as memory-only; photo contribution endpoint currently stores consent metadata.
+Recognition is not proof of ingredients/weight. Scan image is documented in route as memory-only; photo contribution endpoint currently stores consent metadata. Source review found the save route accepts nutrition/provenance fields from the client and the contribution route does not visibly verify scan ownership; treat both as P1 follow-ups in [SECURITY.md](../engineering/SECURITY.md) until fixed and tested.
 
 ## Authentication
 

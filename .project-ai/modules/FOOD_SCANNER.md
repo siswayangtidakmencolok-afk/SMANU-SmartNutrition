@@ -50,6 +50,7 @@ Route, validasi format/ukuran, data status source, dan session check terlihat pa
 ## 10. Known Bugs
 
 Route kontribusi melaporkan state `storageEnabled` berdasarkan token dan menyebut upload, tetapi implementasi yang diperiksa belum mengirim/menyimpan bytes gambar ke object storage.
+Source review 2026-11-12 juga menemukan `photo-contribute` belum terlihat memvalidasi bahwa `scanLogId` dimiliki user yang login, dan `/save` menyimpan beberapa nilai nutrisi/provenance dari request client tanpa bukti verifikasi server. Lihat prioritas P1 pada [SECURITY.md](../engineering/SECURITY.md); keduanya belum diperbaiki oleh pembaruan dokumentasi ini.
 
 ## 11. Limitations
 
@@ -57,7 +58,7 @@ Foto tidak membuktikan resep, bahan tersembunyi, atau berat. Porsi perkiraan buk
 
 ## 12. Pending Improvements
 
-Tambahkan regression tests pipeline; jika object storage dikerjakan, pastikan consent, ownership, retention/deletion, validasi upload, dan lifecycle diuji.
+Tambahkan regression tests pipeline dan ownership; hitung/verifikasi snapshot nutrition/provenance server-side. Jika object storage dikerjakan, pastikan consent, ownership, retention/deletion, validasi upload, dan lifecycle diuji.
 
 ## 13. Testing
 

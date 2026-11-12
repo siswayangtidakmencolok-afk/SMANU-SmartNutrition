@@ -17,6 +17,9 @@
 - Jangan membaca/menampilkan nilai secret; gunakan hanya nama environment variable pada dokumentasi. Secret hanya di server.
 - Jangan menjalankan migrasi production, deployment, commit, push, atau operasi Git destruktif tanpa izin eksplisit. Database production tidak boleh diubah tanpa persetujuan.
 - Jaga validasi server, autentikasi/otorisasi, idempotensi, privasi, dan error yang dapat dipahami. Hindari fallback yang menyamarkan kegagalan.
+- Saat mengubah API/auth/data/AI, baca matriks akses dan temuan `.project-ai/engineering/SECURITY.md`; uji guest/owner/other-user/admin, batas payload, provider spend/timeout, serta redaksi log sesuai route.
+- Jangan mengklaim secure, production-ready, atau siap ribuan pengguna hanya dari build/source review. Bedakan tes otomatis, live smoke test, pentest, dan load test; tandai evidence yang belum ada sebagai UNKNOWN.
+- MCP/Mastra dan vector DB belum terintegrasi. Jangan menambahnya atau menyatakan aktif tanpa task/keputusan, threat model, izin tool, data minimization, dan acceptance criteria.
 - Untuk Next.js, patuhi blok instruksi root `AGENTS.md` dan baca panduan relevan di `node_modules/next/dist/docs/` sebelum perubahan kode Next.js.
 
 ## Implementasi dan verifikasi

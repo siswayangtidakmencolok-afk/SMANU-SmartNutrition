@@ -1,5 +1,26 @@
 # Changelog Dokumentasi Proyek
 
+## 2026-11-12 — Konsolidasi audit arsitektur, AI, dan security
+
+- Memperbarui dokumentasi AI/RAG, keamanan, klasifikasi API, Auth, database, testing, fase, status, roadmap, daftar task, environment, dan indeks berdasarkan source review.
+- Mencatat Langflow/OpenAI/Gemini sebagai jalur yang sudah ada di source; MCP/Mastra dan vector DB sebagai belum terintegrasi. Rekomendasi evolusi bertahap mempertahankan API Next.js sebagai auth/policy boundary.
+- Mendokumentasikan risiko source untuk payload/quota, ownership `photo-contribute`, provenance scanner snapshot, rate limiting, secret consistency, serta batas bukti DB/scale.
+- Tidak membuat Markdown baru dan tidak mengubah source aplikasi, `.env.local`, database, migration, Vercel, atau task aktif `NEXT_TASK.md`.
+- Validasi perubahan dokumentasi: `git diff --check` dan pemeriksaan tautan lokal; tidak menjalankan build karena source tidak berubah. Tidak melakukan pentest, dependency scan, load test, atau verifikasi runtime eksternal.
+
+## 2026-11-12 — Memperbaiki lintasan intro bot Ask SMANU
+
+- Animasi lintasan, jejak, efek pendorong, daun, dan teks kini dimulai setelah komponen terhidrasi, bukan sebelum class peluncuran aktif.
+- Reduced-motion tetap menampilkan gerakan singkat dan salam tanpa efek tambahan; setelah tiba, bot kembali tegak dan diam di posisi tujuan.
+- Browser mengonfirmasi posisi berubah selama lintasan pada mode normal serta mencapai posisi akhir tegak pada mode normal dan reduced-motion. TypeScript, ESLint terfokus, build, dan `git diff --check` lulus; lint halaman Ask masih memiliki diagnostic lama pada efek `searchParams`.
+
+## 2026-11-12 — Visual hub dan karakter Ask SMANU
+
+- Menambahkan orbit cahaya hijau dan daun SVG dekoratif di sekitar hub dashboard pusat.
+- Mengganti ikon senyum/emoji pada halaman Ask SMANU dengan maskot bot inline; status mengubah ekspresi, fokus input mengarahkan tatapan, dan jadwal blink/angguk/miring/daun dibuat bergantian dengan jeda acak.
+- Menonaktifkan gerakan melalui `prefers-reduced-motion`; tidak mengubah request Langflow, kontrak SSE, Auth.js, floating AI chat, atau Food Scanner.
+- Validasi TypeScript dan production build lulus. ESLint pada komponen baru lulus; file Ask SMANU masih memiliki diagnostic lint existing di efek `searchParams` yang tidak terkait perubahan visual.
+
 ## 2026-11-12 — Refinement radial desktop dan mobile
 
 - Mengatur delapan widget menjadi diagram radial dengan hub lingkaran di tengah pada desktop dan komposisi perimeter dua kolom pada mobile.

@@ -1,7 +1,7 @@
 # Status Proyek
 
 **Diperbarui:** 2026-11-12<br>
-**Basis audit:** source di root, manifest, migrations, route, git log, dan satu POST smoke test production Ask SMANU. Vercel dashboard tidak dapat diakses dari workspace.
+**Basis audit:** source di root, manifest, migrations, route, git log, dan satu POST smoke test production Ask SMANU. Source/security review tambahan dilakukan 2026-11-12; bukan penetration test, dependency scan, load test, atau verifikasi ulang runtime. Vercel dashboard tidak dapat diakses dari workspace.
 
 | Modul | Status | Bukti | Kendala/batas bukti | Prioritas |
 |---|---|---|---|---|
@@ -17,6 +17,9 @@
 | Search | VERIFIED (source) | `/api/search` memakai `lib/search.ts` | Endpoint source lokal ada; bukan bukti search eksternal/vektor. | P3 |
 | Deployment | UNKNOWN | `vercel.json` mendeklarasikan framework Next.js, command, region `sin1` | Tidak ada verifikasi deployment, domain, build log, atau Vercel environment dalam audit. | P1 |
 | Automated tests | NOT IMPLEMENTED (manifest) | `package.json` menyediakan lint/build; tidak ada script `test` | Tidak ditemukan runner/test suite project pada inventaris source yang diperiksa. | P1 |
+| API security baseline | PARTIALLY VERIFIED (source review) | Guard session/ownership pada beberapa profile, history, activity dan admin routes; ukuran image dan sebagian input dibatasi | Tidak ada rate-limit/budget layer bersama yang ditemukan; body limits tidak konsisten; `photo-contribute` belum terlihat mengecek owner `scanLogId`; scanner save menerima snapshot client. Bukan pentest. | P1 |
+| AI orchestration / MCP | PARTIALLY VERIFIED (source) | Langflow, Gemini, OpenAI route paths ada; local retrieval berbasis token/category | Tidak ditemukan Mastra/MCP, vector dependency/embedding/index, load benchmark, cost/latency evaluation. Astra DB/vector disebut di copy/prompt lama saja dan upstream Langflow belum bisa diperiksa. | P1/P2 |
+| Scale readiness (thousands) | UNKNOWN | Serverless Next.js dan Neon HTTP driver dideklarasikan di source/manifest | Tidak ditemukan load test, p95/cost SLO, database restore drill, capacity benchmark atau concurrency proof. Target ribuan akun belum terbukti. | P1 |
 
 ## Catatan konsistensi teknis
 
@@ -25,3 +28,4 @@
 - Histori Ask SMANU disimpan di browser melalui `HistoryContext`/`localStorage`, bukan melalui endpoint persistence server.
 - `.env.local` diaudit hanya dengan mengeluarkan nama variabel; nilainya tidak ditampilkan. Lihat [ENVIRONMENT_VARIABLES.md](engineering/ENVIRONMENT_VARIABLES.md).
 - File generated `.next` dan file pengguna yang sudah dirty/untracked tidak menjadi target perubahan dokumentasi.
+- Security action items dan batas klaim terdapat pada [SECURITY.md](engineering/SECURITY.md); rekomendasi AI/MCP pada [AI_ARCHITECTURE.md](architecture/AI_ARCHITECTURE.md). Source review ini tidak mengeksekusi uji terhadap production atau mengubah source/environment.
