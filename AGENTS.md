@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Konteks Proyek SMANU
+
+Sebelum mengerjakan task, baca [.project-ai/README.md](.project-ai/README.md), [.project-ai/AGENT.md](.project-ai/AGENT.md), [.project-ai/PROJECT_CONTEXT.md](.project-ai/PROJECT_CONTEXT.md), [.project-ai/PROJECT_STATUS.md](.project-ai/PROJECT_STATUS.md), [.project-ai/project-management/NEXT_TASK.md](.project-ai/project-management/NEXT_TASK.md), dan [.project-ai/history/SESSION_HANDOFF.md](.project-ai/history/SESSION_HANDOFF.md). Baca dokumen modul/arsitektur yang relevan dan verifikasi source code sebelum mengubahnya.
