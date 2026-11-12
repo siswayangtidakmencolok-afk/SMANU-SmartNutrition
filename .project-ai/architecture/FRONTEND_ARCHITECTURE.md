@@ -18,6 +18,8 @@
 - Rute widget mengikuti halaman aktual: `/ask-smanu`, `/nutrition-knowledge`, `/learning-journey`, `/food-challenge`, `/league`, `/scan-history`, `/my-context`, dan `/history`.
 - AI Food Scanner berupa modal yang diluncurkan dari `/nutrition-knowledge`; kartu pemindai mengarah ke halaman pemilik modal tersebut, bukan rute baru. NutriQuest tetap tersedia di section dashboard dan halaman `/my-context`.
 - Konektor dekoratif disesuaikan untuk diagram desktop dan mobile. Animasi entrance, stagger, glow, dan preview menghormati `prefers-reduced-motion`.
+- Pusat hub memakai orbit cahaya dan daun SVG dekoratif. Ask SMANU memakai `components/chat/SmanuBotMascot.tsx` untuk karakter bot dengan kedipan/gestur acak yang tidak serempak, ekspresi status, tatapan ke input, dan penghormatan terhadap `prefers-reduced-motion`.
+- Animasi maskot hanya berjalan pada halaman Ask SMANU; komponen SVG avatar lainnya statis dan API/chat floating tidak memakai state animasi ini.
 
 ## Data dan status UI
 

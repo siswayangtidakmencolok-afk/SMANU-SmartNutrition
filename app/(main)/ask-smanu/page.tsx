@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useHistory } from "@/context/HistoryContext";
 import { HistorySession } from "@/lib/history-store";
+import { SmanuBotMascot } from "@/components/chat/SmanuBotMascot";
+import { SmanuBotIntro } from "@/components/chat/SmanuBotIntro";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type QueryStatus = "idle" | "loading" | "streaming" | "done" | "error";
@@ -112,6 +114,7 @@ function AskSmanuContent() {
   const [inputText, setInputText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [status, setStatus] = useState<QueryStatus>("idle");
+  const [inputFocused, setInputFocused] = useState(false);
 
   const streamRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -239,6 +242,22 @@ function AskSmanuContent() {
   }
 
   const isDisabled = status === "loading" || status === "streaming";
+  const botMood = status === "loading" || status === "streaming"
+    ? "thinking"
+    : status === "error"
+      ? "concerned"
+      : inputFocused
+        ? "attentive"
+        : status === "done"
+          ? "happy"
+          : "idle";
+  const botStatusLabel = status === "loading" || status === "streaming"
+    ? "Sedang menyiapkan jawaban"
+    : status === "error"
+      ? "Koneksi perlu diperiksa"
+      : status === "done"
+        ? "Jawaban siap"
+        : "Siap membantu";
 
   return (
     <div className="flex h-full overflow-hidden bg-[#F8FAFC]">
@@ -391,11 +410,23 @@ function AskSmanuContent() {
       <main className="flex flex-col flex-1 min-w-0 bg-[#F8FAFC] overflow-hidden">
 
         {/* Breadcrumb */}
-        <div className="h-9 px-6 bg-white/80 border-b border-slate-200/80 flex items-center gap-2 shrink-0">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-semibold text-slate-800">SMANU</span>
-          <span className="text-xs text-slate-400">•</span>
-          <span className="text-xs text-slate-500 hidden sm:inline">Context-aware nutrition assistant</span>
+        <div className="min-h-14 px-4 sm:px-6 bg-white/80 border-b border-slate-200/80 flex items-center gap-2 shrink-0">
+          <SmanuBotMascot
+            className="h-10 w-10 shrink-0"
+            mood={botMood}
+            lookAtInput={inputFocused}
+            decorative
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-800">SMANU</span>
+              <span className="text-xs text-slate-400">•</span>
+              <span className="truncate text-xs text-slate-500 hidden sm:inline">Context-aware nutrition assistant</span>
+            </div>
+            <p aria-live="polite" className="text-[10px] text-emerald-700 leading-tight">
+              {botStatusLabel}
+            </p>
+          </div>
         </div>
 
         {/* ── Mobile context bar (below breadcrumb, hidden on xl) ─────────── */}
@@ -430,24 +461,7 @@ function AskSmanuContent() {
         <div ref={canvasRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
 
           {/* Welcome hero card */}
-          <div className="bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-white border border-emerald-100/80 rounded-2xl p-5 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white border border-emerald-100 shadow-sm flex items-center justify-center shrink-0">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10" fill="#D1FAE5" stroke="#10B981" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M8 14s1.5 2 4 2 4-2 4-2" stroke="#047857" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} />
-                <circle cx="9" cy="9.5" fill="#047857" r="1.5" />
-                <circle cx="15" cy="9.5" fill="#047857" r="1.5" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-1.5">
-                Hi, saya SMANU <span>👋</span>
-              </h2>
-              <p className="text-sm text-slate-600 mt-0.5">
-                Jelaskan kondisi makanmu sekarang, saya bantu menentukan pilihan yang paling masuk akal.
-              </p>
-            </div>
-          </div>
+          <SmanuBotIntro mood={botMood} lookAtInput={inputFocused} />
 
           {/* Quick action prompt pills */}
           {messages.length === 0 && (
@@ -482,9 +496,7 @@ function AskSmanuContent() {
           {/* Loading indicator */}
           {(status === "loading" || status === "streaming") && (
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center shrink-0 mt-1">
-                <span className="text-xs">🌱</span>
-              </div>
+              <SmanuBotMascot className="mt-1 h-10 w-10 shrink-0" mood="thinking" animated={false} decorative />
               <div className="flex items-center gap-2 px-4 py-3 bg-white border border-slate-200 rounded-2xl rounded-tl-none shadow-sm">
                 <span className="flex gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-bounce [animation-delay:0ms]" />
@@ -524,6 +536,8 @@ function AskSmanuContent() {
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
               disabled={isDisabled}
               placeholder="Tanyakan tentang nutrisi, makanan, atau situasi makanmu…"
               className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-4 pr-14 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all disabled:opacity-50"
@@ -711,9 +725,12 @@ function AssistantCard({
   return (
     <div className="flex items-start gap-3 pt-1">
       {/* Mascot avatar */}
-      <div className="w-8 h-8 rounded-full bg-emerald-100 border border-emerald-300 flex items-center justify-center shrink-0 mt-1">
-        <span className="text-xs">🌱</span>
-      </div>
+      <SmanuBotMascot
+        className="mt-1 h-10 w-10 shrink-0"
+        mood={isError ? "concerned" : "happy"}
+        animated={false}
+        decorative
+      />
 
       {/* Card */}
       <div className="flex-1 min-w-0 max-w-3xl bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-5 space-y-4">

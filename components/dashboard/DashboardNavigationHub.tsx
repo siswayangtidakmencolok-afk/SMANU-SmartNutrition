@@ -194,6 +194,37 @@ export function DashboardNavigationHub() {
         </svg>
 
         <div className="dashboard-hub-core dashboard-hub-entrance relative z-10 flex min-w-0 flex-col items-center justify-center border border-emerald-300/40 bg-[#102433]/95 p-4 text-center shadow-[0_0_42px_rgba(16,185,129,0.28)] sm:p-6">
+          <svg
+            aria-hidden="true"
+            className="dashboard-hub-vortex pointer-events-none absolute inset-0 h-full w-full"
+            viewBox="0 0 260 260"
+          >
+            <defs>
+              <filter id="hub-vortex-glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+            <g filter="url(#hub-vortex-glow)">
+              <ellipse className="dashboard-hub-vortex-orbit dashboard-hub-vortex-orbit--one" cx="130" cy="130" rx="112" ry="43" transform="rotate(-32 130 130)" />
+              <ellipse className="dashboard-hub-vortex-orbit dashboard-hub-vortex-orbit--two" cx="130" cy="130" rx="100" ry="52" transform="rotate(28 130 130)" />
+            </g>
+            <g className="dashboard-hub-vortex-leaves">
+              <path d="M37 106c-14-10-14-21-9-27 13 5 19 14 17 26 8-11 17-13 23-10-5 12-15 17-31 11Z" />
+              <path d="M202 60c-3-15 4-22 11-22 6 11 5 19-2 26 13-9 22-8 26-3-7 12-18 15-35 7Z" />
+              <path d="M191 197c-14-6-17-16-13-23 13 2 21 9 22 20 5-12 13-16 20-14-2 13-11 21-29 17Z" />
+            </g>
+            {selectedFeatureId && (
+              <g className="dashboard-hub-vortex-sparks">
+                <circle cx="46" cy="157" r="2" />
+                <circle cx="220" cy="126" r="2" />
+                <circle cx="102" cy="217" r="1.5" />
+              </g>
+            )}
+          </svg>
           <span className="mb-3 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">
             Central Intelligence Hub
           </span>

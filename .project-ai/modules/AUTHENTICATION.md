@@ -76,3 +76,13 @@ Tidak ada test script pada `package.json`; live Auth endpoints tidak diuji ulang
 ## 14. Related Tasks
 
 Lihat [NEXT_TASK.md](../project-management/NEXT_TASK.md) dan daftar environment di [ENVIRONMENT_VARIABLES.md](../engineering/ENVIRONMENT_VARIABLES.md).
+
+## 15. Security review berbasis source (2026-11-12)
+
+- Credentials provider membandingkan bcrypt hash di server dan mengembalikan hanya data identitas ke JWT/session; strategy aktif JWT. Tabel Auth.js `sessions` dideklarasikan, tetapi tidak dipakai oleh strategy ini.
+- Middleware hanya redirect pada `/login` dan `/register`; route API dan data authorization harus terus memanggil `auth()` dan memeriksa ownership/role sendiri.
+- `middleware.ts` memakai `AUTH_SECRET ?? NEXTAUTH_SECRET ?? ""`, sedangkan Auth.js memakai resolusi secret default. Samakan sumber secret dan pastikan deployment fail closed bila secret tidak ada; jangan menambah fallback kosong atau secret hardcoded.
+- Register memvalidasi field dan memakai bcrypt 12 rounds, tetapi memulangkan pesan conflict berbeda untuk email dan username; rate-limit login/register belum terlihat pada source yang diperiksa.
+- Nama `AUTH_SECRET` lokal terdeteksi pada audit sebelumnya; value tidak dibaca. Environment Vercel belum diperiksa dan tidak boleh disimpulkan dari lokal.
+- Belum ada bukti source/test untuk brute-force controls, recovery/password-reset, verification, session revocation, session expiration policy, atau account deletion. Tandai sebagai NOT IMPLEMENTED/UNKNOWN sampai diverifikasi, bukan diasumsikan tersedia.
+- Regression acceptance: guest session, login valid/invalid, csrf/session response, cookie pada HTTPS preview, secret missing fail-closed, throttling, role/admin denial, dan data isolation. Jangan menjalankan terhadap akun atau production tanpa izin.
