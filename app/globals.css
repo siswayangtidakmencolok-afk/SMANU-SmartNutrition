@@ -168,6 +168,206 @@
   50%       { transform: rotate(8deg); }
 }
 
+@keyframes smanu-hub-reveal {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes smanu-hub-flow {
+  to {
+    stroke-dashoffset: -30;
+  }
+}
+
+@keyframes smanu-hub-glow {
+  0%, 100% {
+    opacity: 0.48;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+.dashboard-hub-entrance {
+  animation: smanu-hub-reveal 600ms ease-out backwards;
+}
+
+.dashboard-hub-stage {
+  display: grid;
+  grid-template-areas:
+    "history ask"
+    "knowledge context"
+    "core core"
+    "league challenge"
+    "scanner journey";
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows:
+    minmax(152px, auto)
+    minmax(152px, auto)
+    minmax(184px, auto)
+    minmax(152px, auto)
+    minmax(152px, auto);
+  gap: 0.75rem;
+}
+
+.dashboard-hub-core {
+  grid-area: core;
+  width: min(100%, 216px);
+  aspect-ratio: 1;
+  justify-self: center;
+  align-self: center;
+  border-radius: 9999px;
+  padding: 0.75rem;
+  animation-delay: 80ms;
+}
+
+@media (max-width: 1023px) {
+  .dashboard-hub-core > :first-child {
+    margin-bottom: 0.5rem;
+    padding: 0.1875rem 0.5rem;
+    white-space: nowrap;
+  }
+
+  .dashboard-hub-core > svg {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .dashboard-hub-core > :nth-child(3) {
+    font-size: 1.25rem;
+    line-height: 1.5rem;
+  }
+
+  .dashboard-hub-core > :nth-child(4) {
+    margin-top: 0.125rem;
+    font-size: 0.625rem;
+    line-height: 0.9375rem;
+  }
+
+  .dashboard-hub-core > :nth-child(5) {
+    margin-top: 0.5rem;
+    font-size: 0.625rem;
+    line-height: 0.875rem;
+    white-space: nowrap;
+  }
+}
+
+.dashboard-hub-feature-grid {
+  display: contents;
+}
+
+.dashboard-hub-feature {
+  animation: smanu-hub-reveal 520ms ease-out backwards;
+}
+
+.dashboard-hub-feature--history { grid-area: history; }
+.dashboard-hub-feature--ask { grid-area: ask; }
+.dashboard-hub-feature--knowledge { grid-area: knowledge; }
+.dashboard-hub-feature--context { grid-area: context; }
+.dashboard-hub-feature--league { grid-area: league; }
+.dashboard-hub-feature--challenge { grid-area: challenge; }
+.dashboard-hub-feature--scanner { grid-area: scanner; }
+.dashboard-hub-feature--journey { grid-area: journey; }
+
+.dashboard-hub-connectors-mobile { display: block; }
+.dashboard-hub-connectors-desktop { display: none; }
+
+.dashboard-hub-connector {
+  fill: none;
+  stroke: #facc15;
+  stroke-dasharray: 4 11;
+  stroke-linecap: round;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 5px rgb(250 204 21 / 62%));
+  animation: smanu-hub-flow 2.4s linear infinite, smanu-hub-glow 2.8s ease-in-out infinite;
+}
+
+.dashboard-hub-connectors {
+  display: block;
+}
+
+.dashboard-hub-preview {
+  animation: smanu-hub-reveal 360ms ease-out backwards;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-hub {
+    position: relative;
+    left: 50%;
+    width: calc(100vw - 19rem);
+    max-width: none;
+    transform: translateX(-50%);
+  }
+
+  .dashboard-hub-stage {
+    display: grid;
+    grid-template-areas:
+      "history ask knowledge"
+      "context core league"
+      "challenge scanner journey";
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: minmax(200px, 1fr) minmax(224px, 1.12fr) minmax(200px, 1fr);
+    min-height: 680px;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .dashboard-hub-core {
+    width: min(100%, 252px);
+    padding: 1.5rem;
+  }
+
+  .dashboard-hub-connectors-mobile {
+    display: none;
+  }
+
+  .dashboard-hub-connectors-desktop {
+    display: block;
+  }
+}
+
+@media (max-width: 360px) {
+  .dashboard-hub-stage {
+    grid-template-rows:
+      minmax(152px, auto)
+      minmax(152px, auto)
+      minmax(184px, auto)
+      minmax(152px, auto)
+      minmax(152px, auto);
+  }
+
+  .dashboard-hub-core {
+    width: min(100%, 204px);
+  }
+
+  .dashboard-hub-feature {
+    padding: 0.625rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-hub-entrance,
+  .dashboard-hub-feature,
+  .dashboard-hub-preview,
+  .dashboard-hub-connector {
+    animation: none;
+  }
+
+  .dashboard-hub-feature,
+  .dashboard-hub-preview {
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar,
   .scrollbar-hide::-webkit-scrollbar {
