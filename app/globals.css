@@ -692,17 +692,17 @@
     "scanner journey";
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows:
-    minmax(152px, auto)
-    minmax(152px, auto)
+    minmax(128px, auto)
+    minmax(128px, auto)
     minmax(184px, auto)
-    minmax(152px, auto)
-    minmax(152px, auto);
-  gap: 0.75rem;
+    minmax(128px, auto)
+    minmax(128px, auto);
+  gap: 0.625rem;
 }
 
 .dashboard-hub-core {
   grid-area: core;
-  width: min(100%, 216px);
+  width: min(100%, 204px);
   aspect-ratio: 1;
   justify-self: center;
   align-self: center;
@@ -748,7 +748,92 @@
 }
 
 .dashboard-hub-feature {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 128px;
+  align-self: center;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  grid-template-areas:
+    "feature-icon feature-category"
+    "feature-title feature-title"
+    "feature-description feature-description";
+  align-content: start;
+  column-gap: 0.625rem;
+  row-gap: 0.375rem;
+  padding: 0.75rem;
+  border-width: 1px;
+  transition:
+    transform 240ms ease,
+    border-color 240ms ease,
+    background-color 240ms ease,
+    box-shadow 240ms ease;
   animation: smanu-hub-reveal 520ms ease-out backwards;
+}
+
+.dashboard-hub-feature-head {
+  display: contents;
+}
+
+.dashboard-hub-feature-icon {
+  grid-area: feature-icon;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.8rem;
+}
+
+.dashboard-hub-feature-arrow {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  color: #c8ae5b;
+  opacity: 0.68;
+}
+
+.dashboard-hub-feature-copy {
+  display: contents;
+}
+
+.dashboard-hub-feature-category {
+  grid-area: feature-category;
+  align-self: center;
+  padding-right: 1.5rem;
+  line-height: 1.2;
+}
+
+.dashboard-hub-feature-title {
+  grid-area: feature-title;
+  margin-top: 0.125rem;
+}
+
+.dashboard-hub-feature-description {
+  grid-area: feature-description;
+  line-height: 1.4;
+}
+
+.dashboard-hub-feature-category,
+.dashboard-hub-feature-title,
+.dashboard-hub-feature-description {
+  display: block;
+  min-width: 0;
+}
+
+.dashboard-hub-feature--history,
+.dashboard-hub-feature--knowledge,
+.dashboard-hub-feature--journey {
+  border-radius: 1.35rem 1.1rem 1.35rem 1.1rem;
+}
+
+.dashboard-hub-feature--ask,
+.dashboard-hub-feature--league,
+.dashboard-hub-feature--challenge {
+  border-radius: 1.4rem 1.4rem 0.95rem 1.4rem;
+}
+
+.dashboard-hub-feature--context,
+.dashboard-hub-feature--scanner {
+  border-radius: 1rem;
 }
 
 .dashboard-hub-feature--history { grid-area: history; }
@@ -765,16 +850,25 @@
 
 .dashboard-hub-connector {
   fill: none;
-  stroke: #facc15;
+  stroke: #c8ae5b;
   stroke-dasharray: 4 11;
   stroke-linecap: round;
-  stroke-width: 2.5;
-  filter: drop-shadow(0 0 5px rgb(250 204 21 / 62%));
-  animation: smanu-hub-flow 2.4s linear infinite, smanu-hub-glow 2.8s ease-in-out infinite;
+  stroke-width: 1.75;
+  filter: drop-shadow(0 0 2px rgb(200 174 91 / 32%));
+  animation: smanu-hub-flow 2.4s linear infinite, smanu-hub-connector-glow 2.8s ease-in-out infinite;
 }
 
 .dashboard-hub-connectors {
   display: block;
+}
+
+@keyframes smanu-hub-connector-glow {
+  0%, 100% {
+    opacity: 0.38;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .dashboard-hub-preview {
@@ -797,9 +891,9 @@
       "context core league"
       "challenge scanner journey";
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: minmax(200px, 1fr) minmax(224px, 1.12fr) minmax(200px, 1fr);
-    min-height: 680px;
-    gap: 1rem;
+    grid-template-rows: minmax(184px, 1fr) minmax(220px, 1.08fr) minmax(184px, 1fr);
+    min-height: 620px;
+    gap: 0.875rem;
     align-items: stretch;
   }
 
@@ -815,24 +909,132 @@
   .dashboard-hub-connectors-desktop {
     display: block;
   }
+
+  .dashboard-hub-feature--history {
+    width: 92%;
+    min-height: 154px;
+    align-self: start;
+    justify-self: start;
+  }
+
+  .dashboard-hub-feature--ask {
+    width: 100%;
+    min-height: 174px;
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    grid-template-areas:
+      "feature-icon feature-title"
+      "feature-category feature-description";
+    align-content: center;
+    column-gap: 0.875rem;
+    row-gap: 0.5rem;
+  }
+
+  .dashboard-hub-feature--ask .dashboard-hub-feature-icon,
+  .dashboard-hub-feature--scanner .dashboard-hub-feature-icon {
+    align-self: start;
+  }
+
+  .dashboard-hub-feature--ask .dashboard-hub-feature-arrow,
+  .dashboard-hub-feature--scanner .dashboard-hub-feature-arrow {
+    top: 1rem;
+    right: 1rem;
+  }
+
+  .dashboard-hub-feature--ask .dashboard-hub-feature-copy,
+  .dashboard-hub-feature--scanner .dashboard-hub-feature-copy {
+    display: contents;
+  }
+
+  .dashboard-hub-feature--ask .dashboard-hub-feature-category,
+  .dashboard-hub-feature--scanner .dashboard-hub-feature-category {
+    padding-right: 0;
+  }
+
+  .dashboard-hub-feature--ask .dashboard-hub-feature-title,
+  .dashboard-hub-feature--scanner .dashboard-hub-feature-title {
+    margin-top: 0;
+  }
+
+  .dashboard-hub-feature--knowledge {
+    width: 94%;
+    min-height: 162px;
+    align-self: start;
+    justify-self: end;
+  }
+
+  .dashboard-hub-feature--context {
+    width: 92%;
+    min-height: 148px;
+    justify-self: start;
+  }
+
+  .dashboard-hub-feature--league {
+    width: 100%;
+    min-height: 172px;
+    justify-self: end;
+  }
+
+  .dashboard-hub-feature--challenge {
+    width: 94%;
+    min-height: 160px;
+    align-self: end;
+    justify-self: start;
+  }
+
+  .dashboard-hub-feature--scanner {
+    width: 92%;
+    min-height: 150px;
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    grid-template-areas:
+      "feature-icon feature-title"
+      "feature-category feature-description";
+    align-content: center;
+    align-self: end;
+    column-gap: 0.875rem;
+    row-gap: 0.5rem;
+  }
+
+  .dashboard-hub-feature--journey {
+    width: 96%;
+    min-height: 162px;
+    align-self: end;
+    justify-self: end;
+  }
+
+  .dashboard-hub-feature-arrow {
+    color: #c8ae5b;
+  }
 }
 
 @media (max-width: 360px) {
   .dashboard-hub-stage {
     grid-template-rows:
-      minmax(152px, auto)
-      minmax(152px, auto)
-      minmax(184px, auto)
-      minmax(152px, auto)
-      minmax(152px, auto);
+      minmax(120px, auto)
+      minmax(120px, auto)
+      minmax(168px, auto)
+      minmax(120px, auto)
+      minmax(120px, auto);
+    gap: 0.5rem;
   }
 
   .dashboard-hub-core {
-    width: min(100%, 204px);
+    width: min(100%, 184px);
   }
 
   .dashboard-hub-feature {
+    min-height: 120px;
     padding: 0.625rem;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    column-gap: 0.5rem;
+    row-gap: 0.3rem;
+  }
+
+  .dashboard-hub-feature-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.7rem;
   }
 }
 
