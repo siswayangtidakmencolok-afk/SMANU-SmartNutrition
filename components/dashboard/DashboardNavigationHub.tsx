@@ -252,21 +252,21 @@ export function DashboardNavigationHub() {
                 aria-pressed={isSelected}
                 aria-label={`${feature.title}. ${isSelected ? "Tekan lagi untuk membuka halaman." : "Pilih untuk melihat penjelasan."}`}
                 onClick={() => activateFeature(feature)}
-                className={`dashboard-hub-feature dashboard-hub-feature--${feature.area} group min-w-0 rounded-2xl border p-3 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B1220] sm:p-4 ${
+                className={`dashboard-hub-feature dashboard-hub-feature--${feature.area} group min-w-0 border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B1220] ${
                   isSelected
                     ? "dashboard-hub-feature-selected scale-[1.015] border-emerald-300 bg-[#15352f] shadow-[0_0_24px_rgba(16,185,129,0.22)]"
                     : "border-slate-700 bg-[#111C2E]/95 hover:scale-[1.015] hover:border-emerald-300/50 hover:bg-[#15283a]"
                 }`}
                 style={{ animationDelay: `${180 + index * 75}ms` }}
               >
-                <span className="flex min-w-0 items-start justify-between gap-2">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300/15 bg-emerald-400/10 text-emerald-200">
+                <span className="dashboard-hub-feature-head">
+                  <span className="dashboard-hub-feature-icon flex shrink-0 items-center justify-center border border-emerald-300/15 bg-emerald-400/10 text-emerald-200">
                     <span className="material-symbols-outlined text-[21px]" aria-hidden="true">
                       {feature.icon}
                     </span>
                   </span>
                   <span
-                    className={`material-symbols-outlined mt-1 text-[17px] text-amber-300 transition-transform duration-300 ${
+                    className={`dashboard-hub-feature-arrow material-symbols-outlined text-[17px] transition-transform duration-300 ${
                       isSelected ? "translate-x-1" : "opacity-70 group-hover:translate-x-1"
                     }`}
                     aria-hidden="true"
@@ -274,14 +274,16 @@ export function DashboardNavigationHub() {
                     arrow_forward
                   </span>
                 </span>
-                <span className="mt-3 block text-[10px] font-semibold uppercase tracking-wider text-emerald-200/90">
-                  {feature.category}
-                </span>
-                <span className="mt-1 block break-words text-sm font-bold leading-snug text-white">
-                  {feature.title}
-                </span>
-                <span className="mt-1.5 block break-words text-xs leading-relaxed text-slate-300">
-                  {feature.description}
+                <span className="dashboard-hub-feature-copy">
+                  <span className="dashboard-hub-feature-category text-[10px] font-semibold uppercase tracking-wider text-emerald-200/90">
+                    {feature.category}
+                  </span>
+                  <span className="dashboard-hub-feature-title break-words text-sm font-bold leading-snug text-white">
+                    {feature.title}
+                  </span>
+                  <span className="dashboard-hub-feature-description break-words text-xs leading-relaxed text-slate-300">
+                    {feature.description}
+                  </span>
                 </span>
                 <span className="sr-only">
                   Klik pertama untuk memilih, klik kedua untuk membuka.
